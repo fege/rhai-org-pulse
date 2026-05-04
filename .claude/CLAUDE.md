@@ -64,6 +64,7 @@ npm run dev:full       # Starts Vite (5173) + Express (3001)
 - **Site config**: `data/site-config.json` stores platform-level settings (title prefix). Editable by admins via Settings > General.
 - **Composite keys**: Teams are identified by `orgKey::teamName` (e.g., `shgriffi::Model Serving`).
 - **Field options**: `data/team-data/field-options/<name>.json` stores named sets of allowed values for constrained fields. Field definitions reference an option set via the `optionsRef` property (e.g., `optionsRef: "components"`). When `optionsRef` is set, `allowedValues` is `null` in storage and resolved at runtime. Currently only the "components" option set exists.
+- **Messages**: `data/messages.json` stores admin-created announcements. Merged with computed provider messages at `GET /api/messages`.
 - **Data file formats**: See `docs/DATA-FORMATS.md` for the JSON schema of every data file. Demo fixtures in `fixtures/` must always match production format.
 
 ### Roster Sync (`shared/server/roster-sync/`)
@@ -260,6 +261,7 @@ In production, all routes are authenticated via OpenShift OAuth proxy. The proxy
 - `/api/healthz` — health check (no auth)
 - `/api/whoami` — current user info (supports both proxy and token auth). Response includes `permissionTier`, `isTeamAdmin`, and `roles`. When `X-Impersonate-Uid` header is active, response adds `impersonating: true`, `realAdmin` (admin's email), and overrides `displayName`.
 - `/api/site-config` — site configuration (titlePrefix)
+- `/api/messages` — app-wide messages (computed from module providers + stored admin announcements)
 - `/api/tokens` — list current user's API tokens (blocked during impersonation)
 - `/api/admin/tokens` — list all API tokens (admin)
 - `/api/roster` — org/team structure with members
@@ -310,6 +312,7 @@ In production, all routes are authenticated via OpenShift OAuth proxy. The proxy
 **POST:**
 - `/api/tokens` — create a new API token (returns raw token once)
 - `/api/site-config` — update site configuration (admin)
+- `/api/admin/messages` — create a stored announcement `{ type, text, link? }` (admin)
 
 - `/api/roster/refresh` — refresh all person metrics from Jira
 - `/api/team/:teamKey/refresh` — refresh metrics for one team
@@ -355,6 +358,7 @@ In production, all routes are authenticated via OpenShift OAuth proxy. The proxy
 **DELETE:**
 - `/api/tokens/:id` — revoke own API token
 - `/api/admin/tokens/:id` — revoke any API token (admin)
+- `/api/admin/messages/:id` — remove a stored announcement (admin)
 - `/api/modules/team-tracker/snapshots` — delete all stored snapshots (admin)
 - `/api/modules/ai-impact/assessments` — clear all assessment data (admin)
 - `/api/modules/ai-impact/features` — clear all feature data (admin)

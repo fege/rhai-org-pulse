@@ -148,6 +148,32 @@ Platform-level configuration for the site. Created when an admin saves settings 
 - `titlePrefix` is a string (max 100 characters). When non-empty, it's shown as a subtitle in the sidebar and prepended to the page title.
 - If this file doesn't exist, `titlePrefix` defaults to `""` (empty string).
 
+## Messages — `data/messages.json`
+
+Admin-created announcements stored as a JSON array. Merged with computed provider messages at `GET /api/messages`.
+
+```json
+[
+  {
+    "id": "admin:1717200000000",
+    "type": "info",
+    "text": "Scheduled maintenance on Saturday 10 AM - 12 PM UTC.",
+    "link": {
+      "label": "Details",
+      "href": "https://status.example.com"
+    }
+  }
+]
+```
+
+**Notes:**
+- `id` is auto-generated as `admin:<timestamp>` on creation.
+- `type` is one of: `"warning"`, `"info"`, `"error"`. Determines banner color in the UI.
+- `text` is a plain-text string (no HTML or markdown).
+- `link` is either `null` or an object with non-empty `label` and `href` strings. `href` must be an `http(s)://` or `#` URL (no `javascript:` or `data:` URIs).
+- Created on first `POST /api/admin/messages`. Lives in the PVC-mounted `data/` directory.
+- No update API — to change a message, delete and re-create it.
+
 ## Roster Sync Config — `data/team-data/config.json`
 
 Stores the consolidated configuration for automated roster building (merged from the former `roster-sync-config.json` and IPA config). Managed via the Settings UI and the `POST /api/admin/roster-sync/config` endpoint.

@@ -28,6 +28,7 @@ Core team owns `shared/` via CODEOWNERS. Changes require core team review.
 | `useAllowlist()` | Allowlist management (admin only) |
 | `useImpersonation()` | Admin impersonation state: start/stop, reactive uid/name, isImpersonating |
 | `useModuleLink()` | Cross-module hash navigation (`linkTo`, `navigateTo`) |
+| `useMessages()` | App-wide message system: `messages` (reactive filtered list), `fetchMessages()`, `dismiss(id)` |
 
 ### Utilities
 
@@ -54,6 +55,7 @@ Core team owns `shared/` via CODEOWNERS. Changes require core team review.
 | `RefreshModal.vue` | `@shared/client/components/RefreshModal.vue` | Progress modal for data refresh operations |
 | `PermissionBadge.vue` | `@shared/client/components/PermissionBadge.vue` | Small badge showing user's permission tier |
 | `PersonReferenceField.vue` | `@shared/client/components/PersonReferenceField.vue` | Renders person references (linked -> clickable, unlinked -> plain text) |
+| `AppMessages.vue` | `@shared/client/components/AppMessages.vue` | Stacked app-wide message banners (warning/info/error) with dismiss |
 
 ## Server Exports (`@shared/server`)
 

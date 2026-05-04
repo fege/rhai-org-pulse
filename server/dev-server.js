@@ -308,6 +308,85 @@ app.post('/api/site-config', requireAdmin, function(req, res) {
   }
 });
 
+// ─── Routes: App-wide Messages ───
+
+app.get('/api/messages', async function(req, res) {
+  const userContext = {
+    email: req.userEmail,
+    uid: req.userUid,
+    isAdmin: req.isAdmin,
+    isTeamAdmin: req.isTeamAdmin,
+    permissionTier: req.permissionTier
+  };
+
+  try {
+    const computed = await messageRegistry.getMessages(userContext);
+
+    // Merge stored messages
+    const stored = readFromStorage('messages.json') || [];
+    const all = [...computed, ...stored];
+
+    res.json({ messages: all });
+  } catch (err) {
+    console.error('[messages] Aggregation failed:', err.message);
+    res.json({ messages: [] });
+  }
+});
+
+app.post('/api/admin/messages', requireAdmin, function(req, res) {
+  const { type, text, link } = req.body || {};
+
+  // Validate required fields
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    return res.status(400).json({ error: 'text is required and must be a non-empty string' });
+  }
+
+  const allowedTypes = ['warning', 'info', 'error'];
+  if (!type || !allowedTypes.includes(type)) {
+    return res.status(400).json({ error: `type must be one of: ${allowedTypes.join(', ')}` });
+  }
+
+  // Validate link shape if present
+  if (link != null) {
+    if (typeof link !== 'object' || typeof link.label !== 'string' || !link.label.trim()
+        || typeof link.href !== 'string' || !link.href.trim()) {
+      return res.status(400).json({ error: 'link must have non-empty string "label" and "href" properties' });
+    }
+    const SAFE_HREF = /^(https?:\/\/|#)/i;
+    if (!SAFE_HREF.test(link.href.trim())) {
+      return res.status(400).json({ error: 'link.href must be an http(s) or hash URL' });
+    }
+  }
+
+  const id = `admin:${Date.now()}`;
+  const message = {
+    id,
+    type,
+    text: text.trim(),
+    link: link ? { label: link.label.trim(), href: link.href.trim() } : null
+  };
+
+  const stored = readFromStorage('messages.json') || [];
+  stored.push(message);
+  writeToStorage('messages.json', stored);
+
+  res.status(201).json(message);
+});
+
+app.delete('/api/admin/messages/:id', requireAdmin, function(req, res) {
+  const stored = readFromStorage('messages.json') || [];
+  const index = stored.findIndex(m => m.id === req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: 'Message not found' });
+  }
+
+  stored.splice(index, 1);
+  writeToStorage('messages.json', stored);
+
+  res.status(204).end();
+});
+
 // ─── Routes: API Tokens ───
 
 /**
@@ -748,6 +827,7 @@ app.get('/api/modules', function(req, res) {
 // builtInModules is populated once via getDiscoveredModules() (see top of file).
 
 const diagnosticsRegistry = {};
+const messageRegistry = require('../shared/server/message-registry');
 const moduleContext = { storage: storageModule, requireAuth: authMiddleware, requireAdmin, requireTeamAdmin, roleStore, registerDiagnostics: null };
 
 const persistedState = loadModuleState(storageModule);
@@ -767,7 +847,7 @@ const effectiveState = getEffectiveState(builtInModules, startupState);
 reconcileStartupState(builtInModules, effectiveState, storageModule);
 const enabledSlugs = new Set(Object.entries(effectiveState).filter(([, v]) => v).map(([k]) => k));
 
-const moduleRouters = createModuleRouters(builtInModules, moduleContext, enabledSlugs, diagnosticsRegistry);
+const moduleRouters = createModuleRouters(builtInModules, moduleContext, enabledSlugs, diagnosticsRegistry, messageRegistry);
 
 const ttRouter = moduleRouters['team-tracker'];
 if (ttRouter && enabledSlugs.has('team-tracker')) {

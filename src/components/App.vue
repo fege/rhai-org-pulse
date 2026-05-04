@@ -107,6 +107,12 @@
             </button>
           </div>
         </div>
+
+        <!-- App-wide messages (sticky with header) -->
+        <AppMessages
+          :messages="appMessages"
+          @dismiss="dismissMessage"
+        />
       </header>
 
       <!-- Page content -->
@@ -197,9 +203,11 @@ import AppSidebar from './AppSidebar.vue'
 import LandingPage from './LandingPage.vue'
 import ModuleIframeView from './ModuleIframeView.vue'
 import BackendConnectivityModal from './BackendConnectivityModal.vue'
+import AppMessages from '@shared/client/components/AppMessages.vue'
 import { computed, ref, readonly, provide, onUnmounted, watch } from 'vue'
 import { useAuth } from '@shared/client/composables/useAuth'
 import { useImpersonation } from '@shared/client/composables/useImpersonation'
+import { useMessages } from '@shared/client/composables/useMessages'
 import { usePermissions } from '@shared/client/composables/usePermissions'
 import { useRoster } from '@shared/client/composables/useRoster'
 import { useGithubStats } from '@shared/client/composables/useGithubStats'
@@ -228,7 +236,8 @@ export default {
     RefreshModal,
     LandingPage,
     ModuleIframeView,
-    BackendConnectivityModal
+    BackendConnectivityModal,
+    AppMessages
   },
   setup() {
     const { user: authUser, isAdmin: authIsAdmin, isTeamAdmin: authIsTeamAdmin, refresh: refreshAuth } = useAuth()
@@ -239,6 +248,7 @@ export default {
     const { loadGitlabStats } = useGitlabStats()
     const { modulesData, loadModules, enabledBuiltInSlugs, loadEnabledBuiltInSlugs } = useModules()
     const { mode: themeMode, cycle: cycleTheme } = useTheme()
+    const { messages: appMessages, fetchMessages, dismiss: dismissMessage } = useMessages()
     const titlePrefix = ref('')
 
     watch(titlePrefix, (prefix) => {
@@ -399,7 +409,10 @@ export default {
       activeModuleSlugRef,
       routeParams,
       themeMode,
-      cycleTheme
+      cycleTheme,
+      appMessages,
+      fetchMessages,
+      dismissMessage
     }
   },
   data() {
@@ -488,6 +501,8 @@ export default {
       } finally {
         this.isLoading = false
       }
+      // Fetch messages independently -- non-blocking, never delays initial render
+      this.fetchMessages()
     },
 
     parseHash(hash) {

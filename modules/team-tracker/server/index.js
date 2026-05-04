@@ -438,6 +438,15 @@ module.exports = function registerRoutes(router, context) {
     return result;
   }
 
+  // ─── Field Helpers ───
+
+  function isFieldEmpty(value, field) {
+    if (value === null || value === undefined || value === '') return true
+    if (Array.isArray(value) && value.length === 0) return true
+    if (field.multiValue && Array.isArray(value) && value.every(v => !v)) return true
+    return false
+  }
+
   // ─── Permissions ───
 
   const permissions = require('../../../shared/server/permissions');
@@ -451,6 +460,29 @@ module.exports = function registerRoutes(router, context) {
     }
   }
   rebuildManagerMap();
+
+  /**
+   * requireTeamPurview middleware.
+   * Allows admins, team-admins, or managers who have purview over the team
+   * (i.e., at least one of their managed reports is assigned to the team).
+   */
+  function requireTeamPurview(req, res, next) {
+    if (req.isAdmin) return next();
+    if (req.isTeamAdmin) return next();
+    if (!req.userUid) return res.status(403).json({ error: 'Cannot determine your identity' });
+    const managed = permissions.getManagedUids(req.userUid, managerMap);
+    if (managed.size === 0) return res.status(403).json({ error: 'Not authorized for this team' });
+    const registry = readFromStorage('team-data/registry.json');
+    if (!registry || !registry.people) return res.status(403).json({ error: 'Not authorized for this team' });
+    const teamId = req.params.teamId;
+    for (const uid of managed) {
+      const person = registry.people[uid];
+      if (person && Array.isArray(person.teamIds) && person.teamIds.includes(teamId)) {
+        return next();
+      }
+    }
+    return res.status(403).json({ error: 'Not authorized for this team' });
+  }
 
   /**
    * requireManagerOrAdmin middleware factory.
@@ -1081,7 +1113,7 @@ module.exports = function registerRoutes(router, context) {
 
   // ─── Team Boards ───
 
-  router.patch('/structure/teams/:teamId/boards', requireTeamAdmin, function(req, res) {
+  router.patch('/structure/teams/:teamId/boards', requireTeamPurview, function(req, res) {
     const guard = demoWriteGuard(res);
     if (guard) return;
     const { boards } = req.body;
@@ -3415,6 +3447,79 @@ module.exports = function registerRoutes(router, context) {
         },
         refreshState: { ...refreshState }
       };
+    });
+  }
+
+  // ─── Message Provider: Field Completeness ───
+
+  if (context.registerMessageProvider) {
+    const { getManagerPurview } = require('./manager-purview');
+
+    context.registerMessageProvider('team-tracker:field-completeness', async function(user) {
+      // Early bailout: skip all disk I/O for non-managers.
+      if (!user.uid) return [];
+      if (user.permissionTier === 'user') return [];
+
+      const registry = readFromStorage('team-data/registry.json');
+      if (!registry || !registry.people) return [];
+
+      // Verify this user actually has direct reports
+      const directReportSet = permissions.getDirectReports(user.uid, registry);
+      if (directReportSet.size === 0) return [];
+
+      const fieldStore = require('../../../shared/server/field-store');
+      const teamStore = require('../../../shared/server/team-store');
+      const fieldDefs = fieldStore.readFieldDefinitions(storage);
+      if (!fieldDefs) return [];
+
+      const personFields = fieldDefs.personFields.filter(f => !f.deleted && f.visible);
+      const teamFields = fieldDefs.teamFields.filter(f => !f.deleted && f.visible);
+
+      // If no visible fields are defined, nothing to alert on
+      if (personFields.length === 0 && teamFields.length === 0) return [];
+
+      // Count incomplete direct reports
+      let incompletePersonCount = 0;
+      for (const uid of directReportSet) {
+        const person = registry.people[uid];
+        if (!person || person.status !== 'active') continue;
+        const hasEmpty = personFields.some(f => isFieldEmpty(person._appFields?.[f.id], f));
+        if (hasEmpty) incompletePersonCount++;
+      }
+
+      // Count incomplete teams
+      const teamsData = teamStore.readTeams(storage);
+      const purview = getManagerPurview(user.uid, registry, teamsData, { includeIndirect: false });
+      let incompleteTeamCount = 0;
+      for (const team of purview.teams) {
+        const hasEmpty = teamFields.some(f => isFieldEmpty(team.metadata?.[f.id], f));
+        if (hasEmpty) incompleteTeamCount++;
+      }
+
+      if (incompletePersonCount === 0 && incompleteTeamCount === 0) return [];
+
+      // Build message text
+      const parts = [];
+      if (incompletePersonCount > 0) {
+        const noun = incompletePersonCount === 1 ? 'person' : 'people';
+        parts.push(`${incompletePersonCount} ${noun}`);
+      }
+      if (incompleteTeamCount > 0) {
+        const noun = incompleteTeamCount === 1 ? 'team' : 'teams';
+        parts.push(`${incompleteTeamCount} ${noun}`);
+      }
+      const subject = parts.join(' and ');
+      const verb = (incompletePersonCount + incompleteTeamCount) === 1 ? 'has' : 'have';
+
+      return [{
+        id: 'team-tracker:field-completeness',
+        type: 'warning',
+        text: `${subject} ${verb} incomplete fields.`,
+        link: {
+          label: 'Review',
+          href: '#/team-tracker/manager-dashboard'
+        }
+      }];
     });
   }
 
