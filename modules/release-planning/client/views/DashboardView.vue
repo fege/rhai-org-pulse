@@ -368,12 +368,12 @@ onMounted(async function() {
       {{ error }}
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="text-center py-12 text-gray-500">
+    <!-- Initial loading (no data yet) -->
+    <div v-if="loading && !candidates" class="text-center py-12 text-gray-500">
       Loading release planning data...
     </div>
 
-    <template v-else-if="candidates">
+    <template v-if="candidates">
       <!-- Summary -->
       <SummaryCards :summary="summary" :healthSummary="healthSummary" />
 
@@ -467,6 +467,7 @@ onMounted(async function() {
           :canEdit="canEdit"
           :rockHealth="rockHealth"
           :rockFeatures="rockFeatures"
+          :loading="loading"
           @editRock="handleEditRock"
           @addRock="handleAddRock"
           @deleteRock="handleDeleteRock"
