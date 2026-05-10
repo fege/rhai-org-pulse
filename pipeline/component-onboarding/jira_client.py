@@ -67,17 +67,48 @@ class JiraClient:
 
         return None
 
-    def get_linked_feature_keys(self, issue: dict, link_type: str = "Cloners", target_project: str = "RHAISTRAT") -> list[str]:
-        """Extract linked issue keys of a given link type from an already-fetched issue dict."""
+    def get_linked_feature_keys(
+        self,
+        issue: dict,
+        target_prefixes: tuple[str, ...] = ("RHAISTRAT-", "RHAIRFE-"),
+    ) -> tuple[list[str], dict[str, str]]:
+        """Return (keys, featureTitles) for linked issues matching target_prefixes.
+
+        keys: deduplicated list of matching issue keys (preserve order)
+        featureTitles: {key: summary} for issues where the summary was included
+        """
         links = issue.get("fields", {}).get("issuelinks", [])
         keys = []
+        titles: dict[str, str] = {}
         for link in links:
-            lt = link.get("type", {}).get("name", "")
-            if lt != link_type:
-                continue
             for direction in ("inwardIssue", "outwardIssue"):
-                linked = link.get(direction, {})
+                linked = link.get(direction) or {}
                 key = linked.get("key", "")
-                if key.startswith(target_project + "-"):
+                if any(key.startswith(prefix) for prefix in target_prefixes):
                     keys.append(key)
-        return keys
+                    summary = (linked.get("fields") or {}).get("summary", "")
+                    if summary:
+                        titles[key] = summary
+        unique_keys = list(dict.fromkeys(keys))
+        return unique_keys, {k: titles[k] for k in unique_keys if k in titles}
+
+    def extract_validation_date(self, issue: dict, label: str = "validation-successful") -> str | None:
+        """Find the earliest date the given label was added, from the issue changelog.
+
+        Returns an ISO 8601 string or None if the label was never added or
+        changelog is not present (i.e. expand=changelog was not requested).
+        """
+        changelog = issue.get("changelog") or {}
+        histories = changelog.get("histories") or []
+        earliest = None
+        for history in histories:
+            for item in history.get("items", []):
+                if item.get("field") != "labels":
+                    continue
+                after  = set((item.get("toString")  or "").split())
+                before = set((item.get("fromString") or "").split())
+                if label in after and label not in before:
+                    date = history.get("created")
+                    if date and (earliest is None or date < earliest):
+                        earliest = date
+        return earliest

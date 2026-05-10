@@ -259,14 +259,17 @@ function extractValidationDate(changelog) {
 
 function extractLinkedFeatures(issuelinks) {
   const features = [];
+  const featureTitles = {};
   for (const link of issuelinks) {
     const linked = link.inwardIssue || link.outwardIssue;
     if (!linked) continue;
     if (linked.key.startsWith('RHAISTRAT-') || linked.key.startsWith('RHAIRFE-')) {
-      features.push(linked.key);
+      if (!features.includes(linked.key)) features.push(linked.key);
+      const title = linked.fields?.summary;
+      if (title) featureTitles[linked.key] = title;
     }
   }
-  return [...new Set(features)];
+  return { linkedFeatures: features, featureTitles };
 }
 
 function processIssue(issue) {
@@ -279,7 +282,7 @@ function processIssue(issue) {
   const componentName    = deriveComponentName(issue);
   const onboardingSteps  = deriveOnboardingSteps(labels);
   const completionStatus = deriveCompletionStatus(jiraStatus, labels);
-  const linkedFeatures   = extractLinkedFeatures(issuelinks);
+  const { linkedFeatures, featureTitles } = extractLinkedFeatures(issuelinks);
   const validationDate   = extractValidationDate(issue.changelog);
 
   return {
@@ -295,6 +298,7 @@ function processIssue(issue) {
     contextPath:    '',
     isOperator:     false,
     linkedFeatures,
+    featureTitles,
     labels,
     created:        issue.fields.created,
     resolved:       resolutionDate,

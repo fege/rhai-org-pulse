@@ -1,15 +1,14 @@
 <script setup>
-import { ref, computed, inject } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   components: { type: Object, default: () => ({}) },
+  featureTitles: { type: Object, default: () => ({}) },
   detailCache: { type: Object, default: () => ({}) },
   jiraHost: { type: String, default: 'https://issues.redhat.com' }
 })
 
 const emit = defineEmits(['loadDetail'])
-
-const moduleNav = inject('moduleNav', null)
 
 // ── Sort state ────────────────────────────────────────────────────────────────
 const sortKey = ref('created')
@@ -125,10 +124,6 @@ function formatDate(iso) {
 function selectRow(key) {
   selectedKey.value = selectedKey.value === key ? null : key
   if (key && !props.detailCache[key]) emit('loadDetail', key)
-}
-
-function navigateToFeature(featureKey) {
-  if (moduleNav) moduleNav.navigateTo('feature-review', { select: featureKey })
 }
 
 // Count steps done for a component
@@ -274,13 +269,16 @@ function stepsDone(component) {
             </td>
             <td class="px-4 py-3">
               <div class="flex flex-wrap gap-1">
-                <button
+                <a
                   v-for="feat in (component.linkedFeatures || [])"
                   :key="feat"
+                  :href="`${jiraHost}/browse/${feat}`"
+                  target="_blank"
+                  rel="noopener"
                   class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
-                  @click.stop="navigateToFeature(feat)"
-                  :title="`View ${feat} in Feature Review`"
-                >{{ feat }}</button>
+                  :title="featureTitles[feat] || feat"
+                  @click.stop
+                >{{ feat }}</a>
                 <span v-if="!component.linkedFeatures?.length" class="text-xs text-gray-400">—</span>
               </div>
             </td>

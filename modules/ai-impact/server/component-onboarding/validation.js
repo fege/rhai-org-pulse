@@ -94,6 +94,15 @@ function validateComponentOnboarding(body) {
     }
   }
 
+  // featureTitles: optional { key: string } — titles for linked feature Jira issues
+  if (body.featureTitles !== undefined) {
+    if (!body.featureTitles || typeof body.featureTitles !== 'object' || Array.isArray(body.featureTitles)) {
+      errors.push('featureTitles must be an object');
+    } else if (!Object.values(body.featureTitles).every(v => typeof v === 'string')) {
+      errors.push('featureTitles values must be strings');
+    }
+  }
+
   // labels: optional array of strings, max 100
   if (body.labels !== undefined) {
     if (!Array.isArray(body.labels) || !body.labels.every(s => typeof s === 'string')) {
@@ -154,6 +163,7 @@ function validateComponentOnboarding(body) {
       dockerfilePath: body.dockerfilePath || '',
       isOperator: body.isOperator || false,
       linkedFeatures: body.linkedFeatures || [],
+      featureTitles: body.featureTitles || {},
       labels: body.labels || [],
       onboardingSteps: body.onboardingSteps || {},
       created: body.created || null,

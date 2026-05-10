@@ -22,6 +22,7 @@ ChartJS.register(
 
 const props = defineProps({
   components: { type: Object, default: () => ({}) },
+  featureTitles: { type: Object, default: () => ({}) },
   expanded: { type: Boolean, default: true }
 })
 
@@ -187,6 +188,11 @@ const featureChartOptions = computed(() => ({
     legend: { position: 'bottom', labels: { color: textColor.value, font: { size: 11 }, padding: 10 } },
     tooltip: {
       callbacks: {
+        title: ([item]) => {
+          const key = item.label
+          const title = props.featureTitles[key]
+          return title ? `${key}: ${title}` : key
+        },
         label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x} component${ctx.parsed.x !== 1 ? 's' : ''}`
       }
     }

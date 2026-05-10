@@ -17,6 +17,14 @@ const chartsExpanded = ref(true)
 
 const allComponents = computed(() => props.data?.components ?? {})
 
+const featureTitles = computed(() => {
+  const merged = {}
+  for (const comp of Object.values(allComponents.value)) {
+    Object.assign(merged, comp.featureTitles || {})
+  }
+  return merged
+})
+
 const metrics = computed(() => {
   const list = Object.values(allComponents.value)
   const completed = list.filter(c => c.completionStatus === 'completed')
@@ -82,11 +90,13 @@ const metrics = computed(() => {
       <OnboardingMetricsRow :metrics="metrics" />
       <OnboardingCharts
         :components="allComponents"
+        :feature-titles="featureTitles"
         :expanded="chartsExpanded"
         @toggle="chartsExpanded = !chartsExpanded"
       />
       <ComponentOnboardingTable
         :components="allComponents"
+        :feature-titles="featureTitles"
         :detail-cache="detailCache"
         @load-detail="emit('loadDetail', $event)"
       />

@@ -90,6 +90,7 @@ function getLatestProjection(data) {
       productContext: entry.latest.productContext,
       componentName: entry.latest.componentName,
       linkedFeatures: entry.latest.linkedFeatures,
+      featureTitles: entry.latest.featureTitles || {},
       onboardingSteps: entry.latest.onboardingSteps,
       created: entry.latest.created,
       resolved: entry.latest.resolved,

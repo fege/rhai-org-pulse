@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-05-10T10:01:22.027Z",
+  "fetchedAt": "2026-05-10T11:01:55.980Z",
   "totalComponents": 10,
   "components": {
     "RHOAIENG-61528": {
@@ -18,6 +18,9 @@
         "linkedFeatures": [
           "RHAISTRAT-1373"
         ],
+        "featureTitles": {
+          "RHAISTRAT-1373": "Rename Llama Stack to remove Meta trademark dependency ahead of GA"
+        },
         "labels": [
           "bundle-changes-done",
           "component-onboarding",
@@ -48,7 +51,7 @@
           "autoMergeSetup": false,
           "renovateSetup": false
         },
-        "syncedAt": "2026-05-10T10:01:22.025Z"
+        "syncedAt": "2026-05-10T11:01:55.977Z"
       },
       "history": []
     },
@@ -68,6 +71,9 @@
         "linkedFeatures": [
           "RHAISTRAT-1373"
         ],
+        "featureTitles": {
+          "RHAISTRAT-1373": "Rename Llama Stack to remove Meta trademark dependency ahead of GA"
+        },
         "labels": [
           "bundle-changes-done",
           "component-onboarding",
@@ -98,7 +104,7 @@
           "autoMergeSetup": false,
           "renovateSetup": false
         },
-        "syncedAt": "2026-05-10T10:01:22.026Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -118,6 +124,9 @@
         "linkedFeatures": [
           "RHAISTRAT-1373"
         ],
+        "featureTitles": {
+          "RHAISTRAT-1373": "Rename Llama Stack to remove Meta trademark dependency ahead of GA"
+        },
         "labels": [
           "auto-merge-setup-done",
           "bundle-changes-done",
@@ -153,7 +162,7 @@
           "autoMergeSetup": true,
           "renovateSetup": true
         },
-        "syncedAt": "2026-05-10T10:01:22.026Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -173,6 +182,9 @@
         "linkedFeatures": [
           "RHAISTRAT-1373"
         ],
+        "featureTitles": {
+          "RHAISTRAT-1373": "Rename Llama Stack to remove Meta trademark dependency ahead of GA"
+        },
         "labels": [
           "auto-merge-setup-done",
           "bundle-changes-done",
@@ -208,7 +220,7 @@
           "autoMergeSetup": true,
           "renovateSetup": true
         },
-        "syncedAt": "2026-05-10T10:01:22.026Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -226,6 +238,7 @@
         "contextPath": "",
         "isOperator": false,
         "linkedFeatures": [],
+        "featureTitles": {},
         "labels": [
           "component-onboarding",
           "devops-onboarding",
@@ -253,7 +266,7 @@
           "autoMergeSetup": false,
           "renovateSetup": false
         },
-        "syncedAt": "2026-05-10T10:01:22.026Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -273,6 +286,9 @@
         "linkedFeatures": [
           "RHAISTRAT-964"
         ],
+        "featureTitles": {
+          "RHAISTRAT-964": "Implement batch inference compatible with OpenAI batch APIs in llm-d- DP"
+        },
         "labels": [
           "component-onboarding",
           "component-onboarding-completed",
@@ -305,7 +321,7 @@
           "autoMergeSetup": false,
           "renovateSetup": false
         },
-        "syncedAt": "2026-05-10T10:01:22.026Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -325,6 +341,9 @@
         "linkedFeatures": [
           "RHAISTRAT-964"
         ],
+        "featureTitles": {
+          "RHAISTRAT-964": "Implement batch inference compatible with OpenAI batch APIs in llm-d- DP"
+        },
         "labels": [
           "component-onboarding",
           "devops-onboarding",
@@ -353,7 +372,7 @@
           "autoMergeSetup": false,
           "renovateSetup": false
         },
-        "syncedAt": "2026-05-10T10:01:22.027Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -373,6 +392,9 @@
         "linkedFeatures": [
           "RHAISTRAT-853"
         ],
+        "featureTitles": {
+          "RHAISTRAT-853": "Implement Model Cache in RHOAI"
+        },
         "labels": [
           "auto-merge-setup-done",
           "bundle-changes-done",
@@ -408,7 +430,7 @@
           "autoMergeSetup": true,
           "renovateSetup": true
         },
-        "syncedAt": "2026-05-10T10:01:22.027Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -428,6 +450,9 @@
         "linkedFeatures": [
           "RHAISTRAT-853"
         ],
+        "featureTitles": {
+          "RHAISTRAT-853": "Implement Model Cache in RHOAI"
+        },
         "labels": [
           "auto-merge-setup-done",
           "component-onboarding",
@@ -460,7 +485,7 @@
           "autoMergeSetup": true,
           "renovateSetup": true
         },
-        "syncedAt": "2026-05-10T10:01:22.027Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     },
@@ -480,6 +505,9 @@
         "linkedFeatures": [
           "RHAISTRAT-964"
         ],
+        "featureTitles": {
+          "RHAISTRAT-964": "Implement batch inference compatible with OpenAI batch APIs in llm-d- DP"
+        },
         "labels": [
           "component-onboarding",
           "component-onboarding-completed",
@@ -512,7 +540,7 @@
           "autoMergeSetup": false,
           "renovateSetup": false
         },
-        "syncedAt": "2026-05-10T10:01:22.027Z"
+        "syncedAt": "2026-05-10T11:01:55.980Z"
       },
       "history": []
     }
