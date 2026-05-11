@@ -42,7 +42,7 @@ function findUndocumentedRoutes() {
     }
   }
 
-  const routeRegex = /router\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/;
+  const routeRegex = /(?:router|app)\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/;
   const missing = [];
 
   for (const filePath of files) {
