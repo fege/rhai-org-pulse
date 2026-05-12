@@ -18,8 +18,6 @@ const props = defineProps({
   pages: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['page-click'])
-
 function formatLabel(pageId) {
   const [mod, view] = pageId.split('::')
   return `${mod} / ${view}`
@@ -46,12 +44,6 @@ const chartOptions = {
   },
   scales: {
     x: { beginAtZero: true },
-  },
-  onClick: (event, elements) => {
-    if (elements.length > 0) {
-      const idx = elements[0].index
-      emit('page-click', props.pages[idx].pageId)
-    }
   },
 }
 </script>

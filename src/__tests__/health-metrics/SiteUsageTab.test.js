@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
 
 // Mock the composable
-vi.mock('../../client/composables/useMetricsDashboard.js', () => ({
+vi.mock('../../components/health-metrics/useMetricsDashboard.js', () => ({
   useMetricsDashboard: () => ({
     dashboardData: ref({
       totalViews: 1500,
@@ -29,37 +29,27 @@ vi.mock('../../client/composables/useMetricsDashboard.js', () => ({
 }));
 
 // Mock chart components to avoid canvas issues in test
-vi.mock('../../client/components/TopPagesChart.vue', () => ({
+vi.mock('../../components/health-metrics/TopPagesChart.vue', () => ({
   default: { template: '<div class="mock-top-pages" />' },
 }));
-vi.mock('../../client/components/UsageTrendChart.vue', () => ({
+vi.mock('../../components/health-metrics/UsageTrendChart.vue', () => ({
   default: { template: '<div class="mock-trend" />' },
 }));
-vi.mock('../../client/components/UserTypeBreakdown.vue', () => ({
+vi.mock('../../components/health-metrics/UserTypeBreakdown.vue', () => ({
   default: { template: '<div class="mock-user-type" />' },
 }));
 
-import DashboardView from '../../client/views/DashboardView.vue';
+import SiteUsageTab from '../../components/health-metrics/SiteUsageTab.vue';
 
-describe('DashboardView', () => {
+describe('SiteUsageTab', () => {
   let wrapper;
 
   beforeEach(() => {
-    wrapper = mount(DashboardView, {
-      global: {
-        provide: {
-          moduleNav: {
-            navigateTo: vi.fn(),
-            goBack: vi.fn(),
-            params: ref({}),
-          },
-        },
-      },
-    });
+    wrapper = mount(SiteUsageTab);
   });
 
   it('renders the title', () => {
-    expect(wrapper.text()).toContain('Usage Metrics');
+    expect(wrapper.text()).toContain('Site Usage');
   });
 
   it('displays summary cards', () => {

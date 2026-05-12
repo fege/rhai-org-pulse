@@ -28,7 +28,7 @@ const toggling = ref(false)
 
 async function loadStatus() {
   try {
-    const data = await apiRequest('/modules/health-metrics/tracking/status')
+    const data = await apiRequest('/health-metrics/tracking/status')
     optedOut.value = data.optedOut
   } catch { /* ignore */ }
 }
@@ -37,10 +37,10 @@ async function toggle() {
   toggling.value = true
   try {
     if (optedOut.value) {
-      await apiRequest('/modules/health-metrics/tracking/opt-out', { method: 'DELETE' })
+      await apiRequest('/health-metrics/tracking/opt-out', { method: 'DELETE' })
       optedOut.value = false
     } else {
-      await apiRequest('/modules/health-metrics/tracking/opt-out', { method: 'POST' })
+      await apiRequest('/health-metrics/tracking/opt-out', { method: 'POST' })
       optedOut.value = true
     }
   } catch { /* ignore */ }

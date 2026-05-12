@@ -976,6 +976,10 @@ if (ttRouter && enabledSlugs.has('team-tracker')) {
 
 mountModuleRouters(app, builtInModules, moduleRouters);
 
+// ─── Health Metrics (core feature, not a module) ───
+const { createHealthMetricsRouter } = require('./health-metrics/routes');
+app.use('/api/health-metrics', createHealthMetricsRouter(moduleContext));
+
 /**
  * @openapi
  * /api/modules/{slug}:

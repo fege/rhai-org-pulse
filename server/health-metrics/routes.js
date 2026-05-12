@@ -1,10 +1,13 @@
-module.exports = function registerRoutes(router, context) {
+const express = require('express');
+const { createEventStore } = require('./event-store');
+const { aggregateEvents, mergeDailyBreakdown } = require('./aggregator');
+
+function createHealthMetricsRouter(context) {
   const { storage, requireAdmin, roleStore } = context;
   const { readFromStorage, writeToStorage } = storage;
-  const { DATA_DIR } = require('../../../shared/server/storage');
-  const { createEventStore } = require('./event-store');
-  const { aggregateEvents, mergeDailyBreakdown } = require('./aggregator');
+  const { DATA_DIR } = require('../../shared/server/storage');
 
+  const router = express.Router();
   const DEMO_MODE = process.env.DEMO_MODE === 'true';
   const eventStore = createEventStore(DATA_DIR);
 
@@ -510,4 +513,30 @@ module.exports = function registerRoutes(router, context) {
     const personFields = (fieldDefs.personFields || []).filter(f => !f.deleted);
     res.json({ person: personFields });
   });
-};
+
+  // ─── Routes: Viewer management ───
+
+  router.get('/viewers', requireAdmin, (req, res) => {
+    const assignments = roleStore.listAssignments();
+    const viewers = Object.entries(assignments)
+      .filter(([, entry]) => Array.isArray(entry.roles) && entry.roles.includes('usage-metrics-viewer'))
+      .map(([email]) => ({ email }));
+    res.json({ viewers });
+  });
+
+  router.post('/viewers', requireAdmin, (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'email is required.' });
+    roleStore.assignRole(email, 'usage-metrics-viewer', req.userEmail);
+    res.json({ ok: true });
+  });
+
+  router.delete('/viewers/:email', requireAdmin, (req, res) => {
+    roleStore.revokeRole(req.params.email, 'usage-metrics-viewer');
+    res.json({ ok: true });
+  });
+
+  return router;
+}
+
+module.exports = { createHealthMetricsRouter };

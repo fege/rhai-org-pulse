@@ -51,48 +51,6 @@
       </div>
     </section>
 
-    <!-- Viewer Role Management -->
-    <section>
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Dashboard Viewers</h3>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-        Assign the <code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">usage-metrics-viewer</code> role to non-admin users who should see the dashboard.
-      </p>
-
-      <div class="flex items-center gap-2 mb-4">
-        <input
-          v-model="newViewerEmail"
-          type="email"
-          placeholder="email@redhat.com"
-          class="px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm flex-1 max-w-md"
-          @keydown.enter="assignViewer"
-        />
-        <button
-          @click="assignViewer"
-          :disabled="!newViewerEmail"
-          class="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          Assign Role
-        </button>
-      </div>
-
-      <ul v-if="viewers.length" class="space-y-2">
-        <li
-          v-for="viewer in viewers"
-          :key="viewer.email"
-          class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"
-        >
-          <span class="text-sm text-gray-700 dark:text-gray-300">{{ viewer.email }}</span>
-          <button
-            @click="revokeViewer(viewer.email)"
-            class="text-sm text-red-600 dark:text-red-400 hover:underline"
-          >
-            Revoke
-          </button>
-        </li>
-      </ul>
-      <p v-else class="text-sm text-gray-400 dark:text-gray-500 italic">No viewers assigned. Only admins can access the dashboard.</p>
-    </section>
-
     <!-- Data Management -->
     <section>
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Data Management</h3>
@@ -127,8 +85,6 @@ import { apiRequest } from '@shared/client'
 const selectedFieldId = ref(null)
 const retentionDays = ref(90)
 const personFields = ref([])
-const viewers = ref([])
-const newViewerEmail = ref('')
 const saving = ref(false)
 const message = ref('')
 const messageIsError = ref(false)
@@ -141,7 +97,7 @@ function showMessage(msg, isError = false) {
 
 async function loadConfig() {
   try {
-    const config = await apiRequest('/modules/health-metrics/config')
+    const config = await apiRequest('/health-metrics/config')
     selectedFieldId.value = config.userTypeFieldId || null
     retentionDays.value = config.retentionDays || 90
   } catch { /* ignore */ }
@@ -149,25 +105,15 @@ async function loadConfig() {
 
 async function loadFieldDefinitions() {
   try {
-    const data = await apiRequest('/modules/health-metrics/field-definitions')
+    const data = await apiRequest('/health-metrics/field-definitions')
     personFields.value = data.person || []
-  } catch { /* ignore */ }
-}
-
-async function loadViewers() {
-  try {
-    const data = await apiRequest('/roles')
-    const allAssignments = data.assignments || {}
-    viewers.value = Object.entries(allAssignments)
-      .filter(([, entry]) => Array.isArray(entry.roles) && entry.roles.includes('usage-metrics-viewer'))
-      .map(([email]) => ({ email }))
   } catch { /* ignore */ }
 }
 
 async function saveFieldConfig() {
   saving.value = true
   try {
-    await apiRequest('/modules/health-metrics/config', {
+    await apiRequest('/health-metrics/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userTypeFieldId: selectedFieldId.value }),
@@ -183,7 +129,7 @@ async function saveFieldConfig() {
 async function saveRetentionConfig() {
   saving.value = true
   try {
-    await apiRequest('/modules/health-metrics/config', {
+    await apiRequest('/health-metrics/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ retentionDays: retentionDays.value }),
@@ -196,40 +142,10 @@ async function saveRetentionConfig() {
   }
 }
 
-async function assignViewer() {
-  if (!newViewerEmail.value) return
-  try {
-    await apiRequest('/roles/assign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newViewerEmail.value, role: 'usage-metrics-viewer' }),
-    })
-    newViewerEmail.value = ''
-    showMessage('Viewer role assigned.')
-    await loadViewers()
-  } catch (err) {
-    showMessage(err.message || 'Failed to assign role', true)
-  }
-}
-
-async function revokeViewer(email) {
-  try {
-    await apiRequest('/roles/revoke', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role: 'usage-metrics-viewer' }),
-    })
-    showMessage('Viewer role revoked.')
-    await loadViewers()
-  } catch (err) {
-    showMessage(err.message || 'Failed to revoke role', true)
-  }
-}
-
 async function regenerateAggregates() {
   saving.value = true
   try {
-    const data = await apiRequest('/modules/health-metrics/aggregate', { method: 'POST' })
+    const data = await apiRequest('/health-metrics/aggregate', { method: 'POST' })
     showMessage(`Regenerated ${data.generated} aggregate(s).`)
   } catch (err) {
     showMessage(err.message || 'Failed to regenerate', true)
@@ -242,7 +158,7 @@ async function purgeEvents() {
   if (!confirm('This will delete all raw event data. Aggregates will be kept. Continue?')) return
   saving.value = true
   try {
-    await apiRequest('/modules/health-metrics/events', { method: 'DELETE' })
+    await apiRequest('/health-metrics/events', { method: 'DELETE' })
     showMessage('Raw events purged.')
   } catch (err) {
     showMessage(err.message || 'Failed to purge', true)
@@ -254,6 +170,5 @@ async function purgeEvents() {
 onMounted(() => {
   loadConfig()
   loadFieldDefinitions()
-  loadViewers()
 })
 </script>

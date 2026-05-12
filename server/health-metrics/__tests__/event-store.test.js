@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { createEventStore } from '../../server/event-store.js';
+import { createEventStore } from '../event-store.js';
 
 describe('EventStore', () => {
   let tmpDir;
@@ -11,7 +11,6 @@ describe('EventStore', () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hm-test-'));
     store = createEventStore(tmpDir);
-    // Create the events dir since DATA_DIR is tmpDir (events go to tmpDir/health-metrics/events/)
   });
 
   afterEach(() => {

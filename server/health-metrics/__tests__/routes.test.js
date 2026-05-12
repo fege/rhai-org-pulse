@@ -4,7 +4,6 @@ describe('Health Metrics Routes', () => {
 
   describe('POST /track validation', () => {
     it('rejects missing page', () => {
-      // The route validates page format
       const page = undefined;
       const isValid = page && typeof page === 'string' && page.includes('::');
       expect(isValid).toBeFalsy();
@@ -43,7 +42,6 @@ describe('Health Metrics Routes', () => {
       const RATE_LIMIT_MAX = 30;
       const counts = new Map();
       const email = 'user@redhat.com';
-      // Simulate 30 requests
       for (let i = 0; i < RATE_LIMIT_MAX; i++) {
         const entry = counts.get(email) || { windowStart: Date.now(), count: 0 };
         entry.count++;
@@ -70,7 +68,7 @@ describe('Health Metrics Routes', () => {
 
     it('allows users with usage-metrics-viewer role', () => {
       const req = { isAdmin: false, userEmail: 'viewer@redhat.com' };
-      const hasRole = true; // roleStore.hasRole(email, 'usage-metrics-viewer')
+      const hasRole = true;
       const allowed = req.isAdmin || hasRole;
       expect(allowed).toBe(true);
     });

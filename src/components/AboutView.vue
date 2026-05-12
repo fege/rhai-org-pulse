@@ -266,6 +266,11 @@
       </div>
     </template>
 
+    <!-- Site Usage tab -->
+    <template v-if="activeTab === 'usage' && canViewMetrics">
+      <SiteUsageTab />
+    </template>
+
     <!-- Help & Debug tab -->
     <template v-if="activeTab === 'help'">
       <!-- Build Info -->
@@ -428,11 +433,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   Info,
   BookOpen,
   Wrench,
+  BarChart3 as BarChart3Icon,
   ExternalLink,
   Download as DownloadIcon,
   Copy as CopyIcon,
@@ -449,22 +455,36 @@ import {
   MessageSquarePlus,
   FileCode2
 } from 'lucide-vue-next'
+import { useAuth } from '@shared/client'
+import SiteUsageTab from './health-metrics/SiteUsageTab.vue'
+
+const { isAdmin: authIsAdmin, roles } = useAuth()
 
 const props = defineProps({
   isAdmin: Boolean,
   initialTab: { type: String, default: null }
 })
 
-const tabs = [
-  { id: 'about', label: 'About', icon: Info },
-  { id: 'docs', label: 'Docs', icon: BookOpen },
-  { id: 'help', label: 'Help & Debug', icon: Wrench }
-]
+const canViewMetrics = computed(() =>
+  props.isAdmin || authIsAdmin.value || roles.value.includes('usage-metrics-viewer')
+)
+
+const tabs = computed(() => {
+  const base = [
+    { id: 'about', label: 'About', icon: Info },
+    { id: 'docs', label: 'Docs', icon: BookOpen },
+  ]
+  if (canViewMetrics.value) {
+    base.push({ id: 'usage', label: 'Site Usage', icon: BarChart3Icon })
+  }
+  base.push({ id: 'help', label: 'Help & Debug', icon: Wrench })
+  return base
+})
 
 const activeTab = ref(props.initialTab || 'about')
 
 watch(() => props.initialTab, (val) => {
-  if (val && tabs.some(t => t.id === val)) {
+  if (val && tabs.value.some(t => t.id === val)) {
     activeTab.value = val
   }
 })

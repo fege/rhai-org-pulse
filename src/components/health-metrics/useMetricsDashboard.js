@@ -16,7 +16,7 @@ export function useMetricsDashboard() {
       if (from) params.set('from', from)
       if (to) params.set('to', to)
       const qs = params.toString()
-      dashboardData.value = await apiRequest(`/modules/health-metrics/dashboard${qs ? '?' + qs : ''}`)
+      dashboardData.value = await apiRequest(`/health-metrics/dashboard${qs ? '?' + qs : ''}`)
     } catch (err) {
       error.value = err.message || 'Failed to load dashboard data'
     } finally {
@@ -32,7 +32,7 @@ export function useMetricsDashboard() {
       if (options.sort) params.set('sort', options.sort)
       if (options.limit) params.set('limit', String(options.limit))
       const qs = params.toString()
-      pagesData.value = await apiRequest(`/modules/health-metrics/pages${qs ? '?' + qs : ''}`)
+      pagesData.value = await apiRequest(`/health-metrics/pages${qs ? '?' + qs : ''}`)
     } catch (err) {
       error.value = err.message || 'Failed to load pages data'
     }
@@ -44,7 +44,7 @@ export function useMetricsDashboard() {
       if (from) params.set('from', from)
       if (to) params.set('to', to)
       const qs = params.toString()
-      return await apiRequest(`/modules/health-metrics/pages/${pageId}${qs ? '?' + qs : ''}`)
+      return await apiRequest(`/health-metrics/pages/${pageId}${qs ? '?' + qs : ''}`)
     } catch (err) {
       error.value = err.message || 'Failed to load page detail'
       return null
@@ -57,7 +57,7 @@ export function useMetricsDashboard() {
       if (from) params.set('from', from)
       if (to) params.set('to', to)
       const qs = params.toString()
-      userTypesData.value = await apiRequest(`/modules/health-metrics/user-types${qs ? '?' + qs : ''}`)
+      userTypesData.value = await apiRequest(`/health-metrics/user-types${qs ? '?' + qs : ''}`)
     } catch (err) {
       error.value = err.message || 'Failed to load user types'
     }
