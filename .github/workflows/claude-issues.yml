@@ -50,7 +50,7 @@ jobs:
             echo "is_claimed=false" >> "$GITHUB_OUTPUT"
           fi
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Notify if claimed (comment trigger only)
         if: steps.check-claimed.outputs.is_claimed == 'true' && github.event_name == 'issue_comment'
@@ -59,7 +59,7 @@ jobs:
             --repo ${{ github.repository }} \
             --body "This issue is marked as **claimed** — someone is already working on it. I'll step back. Remove the \`claimed\` label if you'd like me to help."
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Set up Node.js
         if: steps.check-claimed.outputs.is_claimed != 'true'
