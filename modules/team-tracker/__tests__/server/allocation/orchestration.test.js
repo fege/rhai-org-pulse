@@ -9,6 +9,7 @@ function makeDeps(overrides = {}) {
     fetchBoardConfiguration: vi.fn().mockResolvedValue({ filterId: '555' }),
     fetchFilterJql: vi.fn().mockResolvedValue('project = PROJ'),
     fetchIssuesByJql: vi.fn().mockResolvedValue([]),
+    fetchBoardType: vi.fn().mockResolvedValue('scrum'),
     readStorage: vi.fn().mockReturnValue(null),
     writeStorage: vi.fn(),
     ...overrides
@@ -307,6 +308,72 @@ describe('refreshTeam', () => {
     const result = await refreshTeam({ team, hardRefresh: false, ...deps });
 
     expect(result.allocationMode).toBe('points');
+  });
+
+  it('auto-detects kanban boards and uses processKanbanBoard', async () => {
+    const team = makeTeam({
+      boards: [
+        { url: 'https://example.com/boards/123', name: 'Kanban Board', boardId: 123 }
+      ]
+    });
+
+    const deps = makeDeps({
+      fetchBoardType: vi.fn().mockResolvedValue('kanban'),
+      fetchBoardConfiguration: vi.fn().mockResolvedValue({ filterId: '999' }),
+      fetchFilterJql: vi.fn().mockResolvedValue('project = PROJ ORDER BY rank ASC'),
+      fetchIssuesByJql: vi.fn().mockResolvedValue([
+        { key: 'PROJ-1', issueType: 'Bug', activityType: 'Tech Debt & Quality', storyPoints: 3, resolution: 'Done' }
+      ])
+    });
+
+    const result = await refreshTeam({ team, hardRefresh: false, ...deps });
+
+    expect(result).toBeTruthy();
+    // Should have used kanban flow (fetchBoardConfiguration) instead of scrum flow (fetchSprints)
+    expect(deps.fetchBoardConfiguration).toHaveBeenCalledWith(123);
+    expect(deps.fetchSprints).not.toHaveBeenCalled();
+    // Sprint data should use synthetic kanban ID
+    const writeCalls = deps.writeStorage.mock.calls;
+    expect(writeCalls.some(c => c[0] === 'sprints/kanban-123.json')).toBe(true);
+  });
+
+  it('falls back to scrum when fetchBoardType fails', async () => {
+    const team = makeTeam({
+      boards: [
+        { url: 'https://example.com/boards/123', name: 'Board A', boardId: 123 }
+      ]
+    });
+
+    const deps = makeDeps({
+      fetchBoardType: vi.fn().mockRejectedValue(new Error('API error')),
+      fetchSprints: vi.fn().mockResolvedValue([
+        { id: 100, name: 'Sprint 1', state: 'active', startDate: '2025-01-15', endDate: '2025-01-28', completeDate: null }
+      ]),
+      fetchSprintIssues: vi.fn().mockResolvedValue([])
+    });
+
+    const result = await refreshTeam({ team, hardRefresh: false, ...deps });
+
+    expect(result).toBeTruthy();
+    // Should fall back to scrum flow
+    expect(deps.fetchSprints).toHaveBeenCalled();
+  });
+
+  it('falls back to scrum when fetchBoardType is not provided', async () => {
+    const team = makeTeam();
+
+    const deps = makeDeps({
+      fetchBoardType: undefined,
+      fetchSprints: vi.fn().mockResolvedValue([
+        { id: 100, name: 'Sprint 1', state: 'active', startDate: '2025-01-15', endDate: '2025-01-28', completeDate: null }
+      ]),
+      fetchSprintIssues: vi.fn().mockResolvedValue([])
+    });
+
+    const result = await refreshTeam({ team, hardRefresh: false, ...deps });
+
+    expect(result).toBeTruthy();
+    expect(deps.fetchSprints).toHaveBeenCalled();
   });
 
   it('continues when individual boards fail', async () => {

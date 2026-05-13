@@ -100,6 +100,7 @@ module.exports = function registerAllocationRoutes(router, context) {
           fetchBoardConfiguration: jiraClient.fetchBoardConfiguration,
           fetchFilterJql: jiraClient.fetchFilterJql,
           fetchIssuesByJql: jiraClient.fetchIssuesByJql,
+          fetchBoardType: jiraClient.fetchBoardType,
           readStorage: allocRead,
           writeStorage: allocWrite
         });

@@ -266,6 +266,34 @@ describe('createJiraClient', () => {
     });
   });
 
+  describe('fetchBoardType', () => {
+    it('returns board type from Jira API', async () => {
+      const jiraRequest = vi.fn().mockResolvedValueOnce({
+        id: 42,
+        name: 'My Board',
+        type: 'kanban'
+      });
+
+      const client = createJiraClient({ jiraRequest, jiraHost });
+      const type = await client.fetchBoardType(42);
+
+      expect(type).toBe('kanban');
+      expect(jiraRequest).toHaveBeenCalledWith('/rest/agile/1.0/board/42');
+    });
+
+    it('defaults to scrum when type field is missing', async () => {
+      const jiraRequest = vi.fn().mockResolvedValueOnce({
+        id: 42,
+        name: 'My Board'
+      });
+
+      const client = createJiraClient({ jiraRequest, jiraHost });
+      const type = await client.fetchBoardType(42);
+
+      expect(type).toBe('scrum');
+    });
+  });
+
   describe('fetchSprintIssues', () => {
     it('fetches and transforms issue fields correctly', async () => {
       const jiraRequest = vi.fn().mockResolvedValueOnce({

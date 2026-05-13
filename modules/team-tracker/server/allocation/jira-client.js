@@ -179,7 +179,15 @@ function createJiraClient({ jiraRequest, jiraHost }) {
     return issues;
   }
 
-  return { fetchBoards, fetchSprints, fetchSprintIssues, fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql };
+  /**
+   * Fetch the board type (scrum or kanban) for a given board ID.
+   */
+  async function fetchBoardType(boardId) {
+    const data = await jiraRequest(`/rest/agile/1.0/board/${boardId}`);
+    return data.type || 'scrum';
+  }
+
+  return { fetchBoards, fetchSprints, fetchSprintIssues, fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql, fetchBoardType };
 }
 
 module.exports = { createJiraClient };

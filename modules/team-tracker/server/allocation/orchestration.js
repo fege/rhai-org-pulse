@@ -224,7 +224,7 @@ async function processKanbanBoard({ board, teamId, allocationMode, fetchBoardCon
  * Refresh allocation data for a single team.
  * Iterates the team's boards that have a valid boardId.
  */
-async function refreshTeam({ team, hardRefresh, fetchSprints, fetchSprintIssues, fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql, readStorage, writeStorage }) {
+async function refreshTeam({ team, hardRefresh, fetchSprints, fetchSprintIssues, fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql, fetchBoardType, readStorage, writeStorage }) {
   const teamId = team.id;
   const allocationMode = team.metadata?.allocationMode || 'points';
   const boards = (team.boards || []).filter(b => b.boardId);
@@ -240,9 +240,16 @@ async function refreshTeam({ team, hardRefresh, fetchSprints, fetchSprintIssues,
 
   for (const board of boards) {
     try {
-      // Determine board type from URL heuristics (kanban detection not available from team-store,
-      // default to scrum unless board metadata says otherwise)
-      const boardType = board.boardType || 'scrum';
+      // Auto-detect board type from Jira API (falls back to scrum if detection fails)
+      let boardType = 'scrum';
+      if (fetchBoardType) {
+        try {
+          boardType = await fetchBoardType(board.boardId);
+          console.log(`  [allocation] Detected board type: ${boardType} for board ${board.boardId}`);
+        } catch (err) {
+          console.warn(`  [allocation] Could not detect board type for ${board.boardId}, defaulting to scrum:`, err.message);
+        }
+      }
 
       let result;
       if (boardType === 'kanban') {
@@ -304,7 +311,7 @@ async function refreshTeam({ team, hardRefresh, fetchSprints, fetchSprintIssues,
 /**
  * Full refresh: read teams from team-store, process each, then build org and global summaries.
  */
-async function performRefresh({ teams, hardRefresh, fetchSprints, fetchSprintIssues, fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql, readStorage, writeStorage }) {
+async function performRefresh({ teams, hardRefresh, fetchSprints, fetchSprintIssues, fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql, fetchBoardType, readStorage, writeStorage }) {
   console.log(`[allocation] Starting refresh for ${teams.length} teams (hardRefresh: ${hardRefresh})`);
   const refreshStart = Date.now();
 
@@ -316,7 +323,7 @@ async function performRefresh({ teams, hardRefresh, fetchSprints, fetchSprintIss
         team, hardRefresh,
         fetchSprints, fetchSprintIssues,
         fetchBoardConfiguration, fetchFilterJql, fetchIssuesByJql,
-        readStorage, writeStorage
+        fetchBoardType, readStorage, writeStorage
       });
       if (result) {
         teamResults.push(result);
