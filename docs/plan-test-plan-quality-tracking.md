@@ -386,35 +386,56 @@ Manual E2E checklist: `docs/e2e-test-plan-quality.md`
 
 ### 1. Data Push Pipeline (highest priority)
 
-The dashboard API is ready to receive data, but there is no automated pipeline to push test plan review scores from `odh-test-gen` to `rhai-org-pulse`. This needs to be designed as a CI pipeline, analogous to how `rfe-assessor` pushes to org-pulse today.
+The dashboard API is ready to receive data. The automated push pipeline will follow the same pattern as the existing RFE assessment pipeline, with rfe-assessor (GitLab CI) as the centralized push hub.
 
-**Reference architecture — RFE pipeline:**
+**Architecture:**
 
 ```
-rfe-creator (skill)
-  → stamps Jira labels
-  → produces Assessment.md
-
-rfe-assessor (CI repo)
-  → runs assessment pipeline on PRs
-  → writes scores to rfe-assess-data repo
-
-rfe-assess-data (data repo)
-  → stores raw assessment files (scores.csv + .result.md)
-  → CI triggers push-to-org-pulse.py on merge
-  → push script reads files, maps to API format, POSTs bulk
-
-org-pulse
-  → receives bulk, upserts, triggers Jira sync
+odh-test-gen (GitHub — skill repo)
+  │ Developer runs /test-plan-create per feature
+  │ Produces TestPlan.md, TestPlanReview.md, TC-*.md
+  │ Stamps Jira labels (Steps 3.6 + 4.5)
+  │
+  ▼ PR merges
+odh-test-plans (GitHub — centralized data repo)
+  │ features/{RHAISTRAT-XXXX}/
+  │   ├── TestPlan.md          (feature name, components, source key)
+  │   ├── TestPlanReview.md    (scores, verdict, auto_revised, feedback)
+  │   └── test_cases/TC-*.md   (generated test cases)
+  │
+  ▼ Cloned by GitLab CI
+rfe-assessor (GitLab — CI pipeline hub)
+  │ New job: push-test-plans
+  │ scripts/push-test-plans-to-org-pulse.py
+  │   1. Walk features/**/TestPlanReview.md
+  │   2. Parse frontmatter (scores, verdict, auto_revised, reviewed_at)
+  │   3. Enrich from TestPlan.md (feature name, components)
+  │   4. Count TC-*.md in test_cases/ for testCaseCount
+  │   5. POST to /test-plans/bulk in batches of 25
+  │
+  ▼
+org-pulse /test-plans/bulk → Jira sync auto-triggers 10s later
 ```
 
-**Proposed test-plan pipeline — options to explore:**
+This makes rfe-assessor the single CI hub for all three AI Impact data types:
 
-- **Option A: Dedicated data repo** (like `rfe-assess-data`) — `odh-test-gen` writes reviews, a separate repo aggregates and pushes. Most CI-friendly but adds a repo.
-- **Option B: Push from odh-test-gen directly** — add a `scripts/push-to-org-pulse.py` to odh-test-gen that walks the features dir for `TestPlanReview.md` files. Simpler but couples the skill repo to the dashboard.
-- **Option C: GitHub Action on odh-test-gen** — trigger on PR merge that touches `TestPlanReview.md` files. Lightweight, but needs careful path filtering.
+| CI Job | Source Repo | Push Script | Target Endpoint |
+|--------|-----------|-------------|-----------------|
+| `assess-rfe` (existing) | rfe-assess-data (GitLab) | `push-to-org-pulse.py` | `/assessments/bulk` |
+| `push-test-plans` (new) | odh-test-plans (GitHub) | `push-test-plans-to-org-pulse.py` | `/test-plans/bulk` |
+| `push-features` (future) | TBD | TBD | `/features/bulk` |
 
-The push script itself is straightforward (mirror `rfe-assessor/scripts/push-to-org-pulse.py`):
+**New files needed in rfe-assessor:**
+
+- `scripts/push-test-plans-to-org-pulse.py` — mirrors `push-to-org-pulse.py` pattern
+- `.gitlab-ci.yml` update — add `push-test-plans` job that clones odh-test-plans and runs the script
+
+**Secrets needed in rfe-assessor GitLab CI:**
+
+- `ORG_PULSE_URL` / `ORG_PULSE_API_TOKEN` — already configured
+- `GITHUB_TOKEN` or deploy key — to clone odh-test-plans from GitHub
+
+**Push script details:**
 
 - Walk `--features-dir` for `TestPlanReview.md` files
 - Read review frontmatter via YAML parser (scores, verdict, auto_revised, reviewed_at)
@@ -424,6 +445,7 @@ The push script itself is straightforward (mirror `rfe-assessor/scripts/push-to-
 - POST to `/api/modules/ai-impact/test-plans/bulk` in batches of 25
 - Auth via `ORG_PULSE_URL` + `ORG_PULSE_API_TOKEN` env vars
 - `--dry-run` flag for local testing
+- Non-blocking: always exits 0, logs warnings on failure
 - Dependencies: PyYAML only (or stdlib-only if frontmatter is simple enough)
 
 ### 2. criterionNotes Gap
