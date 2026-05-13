@@ -114,7 +114,8 @@ function mountView(teamKey = 'AAET::Model Serving') {
         moduleNav: {
           params: ref({ teamKey }),
           goBack: vi.fn(),
-          navigateTo: vi.fn()
+          navigateTo: vi.fn(),
+          updateParams: vi.fn()
         }
       }
     }

@@ -280,7 +280,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount, inject, watch } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, inject, watch, nextTick } from 'vue'
 import TeamOverviewTab from '../components/TeamOverviewTab.vue'
 import TeamDeliveryTab from '../components/TeamDeliveryTab.vue'
 import TeamBacklogTab from '../components/TeamBacklogTab.vue'
@@ -569,9 +569,24 @@ const visibleTabs = computed(() => [
   { id: 'allocation', label: '40/40/20 Allocation', icon: TAB_ICONS.allocation },
 ])
 
+const VALID_TABS = ['overview', 'delivery', 'backlog', 'allocation']
+let updatingFromUrl = false
+
 watch(activeTab, (tab) => {
   tabActivated.value[tab] = true
+  if (!updatingFromUrl) {
+    nav.updateParams({ tab: tab === 'overview' ? undefined : tab })
+  }
 })
+
+watch(() => nav.params.value?.tab, (tabParam) => {
+  const tab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview'
+  if (activeTab.value !== tab) {
+    updatingFromUrl = true
+    activeTab.value = tab
+    nextTick(() => { updatingFromUrl = false })
+  }
+}, { immediate: true })
 
 // --- Navigation ---
 function handleSelectPerson(member) {
@@ -607,12 +622,6 @@ onMounted(() => {
   fetchDefinitions()
   resumeTourIfActive('team-detail')
 
-  // Deep-link to a specific tab via URL params (e.g. ?tab=allocation)
-  const tabParam = nav.params.value?.tab
-  if (tabParam && ['overview', 'delivery', 'backlog', 'allocation'].includes(tabParam)) {
-    activeTab.value = tabParam
-    tabActivated.value[tabParam] = true
-  }
 })
 
 onBeforeUnmount(() => {

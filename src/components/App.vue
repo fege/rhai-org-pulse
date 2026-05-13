@@ -361,6 +361,40 @@ export default {
         if (qs) hash += `?${qs}`
         window.location.hash = hash
       },
+      updateParams(newParams, { push = true } = {}) {
+        const hash = window.location.hash || '#/'
+        const raw = hash.slice(2)
+        const qIdx = raw.indexOf('?')
+        const pathPart = qIdx >= 0 ? raw.substring(0, qIdx) : raw
+        const queryPart = qIdx >= 0 ? raw.substring(qIdx + 1) : ''
+        const params = {}
+        if (queryPart) {
+          for (const pair of queryPart.split('&')) {
+            const eqIdx = pair.indexOf('=')
+            if (eqIdx >= 0) {
+              params[decodeURIComponent(pair.substring(0, eqIdx))] = decodeURIComponent(pair.substring(eqIdx + 1))
+            } else if (pair) {
+              params[decodeURIComponent(pair)] = ''
+            }
+          }
+        }
+        for (const [k, v] of Object.entries(newParams)) {
+          if (v === undefined || v === null) {
+            delete params[k]
+          } else {
+            params[k] = String(v)
+          }
+        }
+        let newHash = `#/${pathPart}`
+        const qs = Object.entries(params)
+          .filter(([, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+          .join('&')
+        if (qs) newHash += `?${qs}`
+        routeParams.value = { ...params }
+        const method = push ? 'pushState' : 'replaceState'
+        history[method](null, '', newHash)
+      },
       goBack() {
         history.back()
       },
@@ -464,6 +498,7 @@ export default {
   },
   async mounted() {
     window.addEventListener('hashchange', this.onHashChange)
+    window.addEventListener('popstate', this.onPopState)
     window.addEventListener('keydown', this.onKeyDown)
     await this.loadBuiltInManifestsFromApi()
     if (this.authUser) {
@@ -472,6 +507,7 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('hashchange', this.onHashChange)
+    window.removeEventListener('popstate', this.onPopState)
     window.removeEventListener('keydown', this.onKeyDown)
   },
   methods: {
@@ -688,6 +724,10 @@ export default {
     },
 
     onHashChange() {
+      this.restoreFromHash()
+    },
+
+    onPopState() {
       this.restoreFromHash()
     },
 
