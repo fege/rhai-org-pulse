@@ -8,6 +8,7 @@ const moduleNav = inject('moduleNav')
 const selectedPhase = ref(null)
 const labelsExpanded = ref(false)
 const featureLabelsExpanded = ref(false)
+const testPlanLabelsExpanded = ref(false)
 
 // Phase metadata for the rich overview cards
 const phaseInfo = {
@@ -23,8 +24,8 @@ const phaseInfo = {
     desc: 'Engineering teams implement approved features across sprints with AI-assisted code generation.',
     color: 'purple',
   },
-  'qe-validation': {
-    desc: 'Automated and manual testing validates feature quality before release.',
+  'test-plan-review': {
+    desc: 'AI-generated test plans are scored against a 5-dimension rubric. Plans that pass proceed to test case generation.',
     color: 'cyan',
   },
   'security': {
@@ -143,6 +144,40 @@ const featureToolLinks = [
 ]
 
 const featureCommunityLinks = [
+  { label: '#forum-rhai-ai-first', icon: HelpCircle, url: 'https://app.slack.com/client/E030G10V24F/forum-rhai-ai-first' },
+]
+
+// Test Plan Review data
+const testPlanSteps = [
+  { name: 'Strategy Input', desc: 'Developer provides a RHAISTRAT key — the skill pulls the feature strategy from Jira', ai: false },
+  { name: 'Test Plan Generation', desc: 'AI analyzes the strategy and generates a structured test plan (TestPlan.md)', ai: true },
+  { name: 'Quality Review', desc: 'AI scores the test plan across 5 dimensions (0-2 each, /10 total)', ai: true },
+  { name: 'Auto-Revision', desc: 'Failing plans are automatically revised up to 2 cycles', ai: true },
+  { name: 'Human Sign-off', desc: 'QE or test lead reviews and approves via test-plan-human-sign-off label', ai: false },
+]
+
+const testPlanScoringCriteria = [
+  { name: 'Specificity', range: '0-2', question: 'Is the plan concrete and feature-specific, not generic boilerplate?' },
+  { name: 'Grounding', range: '0-2', question: 'Are all findings traceable to source documents?' },
+  { name: 'Scope Fidelity', range: '0-2', question: 'Does the test scope align with the strategy boundaries?' },
+  { name: 'Actionability', range: '0-2', question: 'Can QE start testing immediately from this plan?' },
+  { name: 'Consistency', range: '0-2', question: 'Do all sections align internally (priorities, endpoints, coverage)?' },
+]
+
+const testPlanLabels = [
+  { name: 'test-plan-auto-created', color: 'blue', desc: 'An AI-generated test plan exists for this feature' },
+  { name: 'test-plan-rubric-pass', color: 'green', desc: 'Test plan passed quality scoring (all criteria = 2)' },
+  { name: 'test-plan-rubric-fail', color: 'red', desc: 'Test plan failed scoring — needs rework' },
+  { name: 'test-plan-auto-revised', color: 'purple', desc: 'Test plan was automatically improved by AI' },
+  { name: 'test-plan-human-sign-off', color: 'indigo', desc: 'Human QE/test lead has approved the test plan' },
+]
+
+const testPlanToolLinks = [
+  { label: 'odh-test-gen plugin', icon: Code, url: 'https://github.com/opendatahub-io/odh-test-gen' },
+  { label: 'Skills Registry', icon: BookOpen, url: 'https://github.com/opendatahub-io/skills-registry' },
+]
+
+const testPlanCommunityLinks = [
   { label: '#forum-rhai-ai-first', icon: HelpCircle, url: 'https://app.slack.com/client/E030G10V24F/forum-rhai-ai-first' },
 ]
 
@@ -717,6 +752,224 @@ function labelColorClasses(color) {
           <div class="flex gap-2 flex-wrap">
             <a
               v-for="link in featureCommunityLinks"
+              :key="link.label"
+              :href="link.url"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              <component :is="link.icon" :size="14" class="text-gray-400 dark:text-gray-500" />
+              {{ link.label }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Test Plan Review Detail ─── -->
+    <div v-else-if="selectedPhase.id === 'test-plan-review'" class="flex-1 overflow-auto p-6 lg:p-8">
+      <div class="max-w-3xl mx-auto">
+        <!-- Back -->
+        <button
+          @click="closeDetail"
+          class="flex items-center gap-2 text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 mb-4 cursor-pointer"
+        >
+          <ArrowLeft :size="16" />
+          Back to Pipeline Overview
+        </button>
+
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-8">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-cyan-500/10 border-2 border-cyan-500 flex items-center justify-center">
+              <span class="text-cyan-600 dark:text-cyan-400 text-sm font-bold">4</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Test Plan Review</h2>
+              <p class="text-sm text-gray-500 dark:text-gray-400">AI generates structured test plans from approved feature strategies, then scores them across 5 quality dimensions. Plans that pass can proceed directly to test case generation.</p>
+            </div>
+          </div>
+          <button
+            @click="goToPage('test-plan-review')"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0 ml-4"
+          >
+            Go to Test Plan Review
+            <ChevronRight :size="16" />
+          </button>
+        </div>
+
+        <!-- How it works -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 mb-6">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">How it works</h3>
+          <div class="relative ml-1">
+            <div class="absolute left-[15px] top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+            <div v-for="(step, i) in testPlanSteps" :key="step.name" class="flex items-start gap-4 relative" :class="i < testPlanSteps.length - 1 ? 'pb-5' : ''">
+              <div
+                class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10"
+                :class="step.ai
+                  ? 'bg-cyan-500/10 border-2 border-cyan-500'
+                  : 'bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'"
+              >
+                <Sparkles v-if="step.ai" :size="16" class="text-cyan-600 dark:text-cyan-400" />
+                <User v-else :size="16" class="text-gray-400 dark:text-gray-500" />
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ step.name }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ step.desc }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scoring quick reference -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 mb-6">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Scoring quick reference</h3>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">5 dimensions · 0-2 each · /10 total · All five must score 2 to pass</p>
+          <div class="space-y-3">
+            <div v-for="c in testPlanScoringCriteria" :key="c.name" class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+              <div class="w-32 text-right whitespace-nowrap flex-shrink-0">
+                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ c.name }}</span>
+                <span class="text-xs text-gray-400 dark:text-gray-500 ml-1">{{ c.range }}</span>
+              </div>
+              <div class="w-px h-8 bg-gray-200 dark:bg-gray-600"></div>
+              <div class="flex-1">
+                <div class="text-sm text-gray-700 dark:text-gray-300">{{ c.question }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Verdicts -->
+          <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Verdicts</h4>
+            <div class="space-y-2">
+              <div class="flex items-start gap-3 p-3 bg-green-500/5 border border-green-200 dark:border-green-500/20 rounded-lg">
+                <span class="text-base mt-px">&#x2705;</span>
+                <div>
+                  <span class="text-sm font-semibold text-green-600 dark:text-green-400">READY</span>
+                  <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">all criteria = 2</span>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Test plan is solid — proceed to test case generation</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-lg">
+                <span class="text-base mt-px">&#x26A0;&#xFE0F;</span>
+                <div>
+                  <span class="text-sm font-semibold text-amber-600 dark:text-amber-400">REVISE</span>
+                  <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">some criteria &lt; 2</span>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-revision will attempt to fix — up to 2 cycles</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-lg">
+                <span class="text-base mt-px">&#x274C;</span>
+                <div>
+                  <span class="text-sm font-semibold text-red-600 dark:text-red-400">REWORK</span>
+                  <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">fundamental gaps</span>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Provide additional source documents (ADR, API spec, design doc) and re-run</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- How to check your test plan's score -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 mb-6">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">How to check your test plan's score</h3>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+              <Search :size="20" class="text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <div class="text-sm font-semibold text-gray-900 dark:text-white">Check labels in Jira</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Look for <code class="px-1.5 py-0.5 bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400 text-xs rounded font-mono">test-plan-rubric-pass</code> (passing) or <code class="px-1.5 py-0.5 bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 text-xs rounded font-mono">test-plan-rubric-fail</code> (failing) on your RHAISTRAT ticket</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+              <Eye :size="20" class="text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <div class="text-sm font-semibold text-gray-900 dark:text-white">View details in AI Impact</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Find your test plan on the <button @click="goToPage('test-plan-review')" class="text-cyan-600 dark:text-cyan-400 hover:underline font-medium">Test Plan Review</button> page to see the full score breakdown, gap analysis, and per-criterion results</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What you need to do -->
+        <div class="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 rounded-xl p-6 mb-6">
+          <h3 class="text-sm font-semibold text-cyan-700 dark:text-cyan-400 uppercase tracking-wide mb-3">What you need to do</h3>
+          <ul class="space-y-3">
+            <li class="flex items-start gap-3">
+              <Sparkles :size="20" class="text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">Run <code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700/50 text-cyan-700 dark:text-cyan-400 text-xs rounded font-mono">/test-plan-create RHAISTRAT-XXX</code> in Claude Code to generate a test plan from a feature strategy</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <Eye :size="20" class="text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">Check the verdict — <strong class="text-gray-900 dark:text-white">Ready</strong> means proceed to test cases, <strong class="text-gray-900 dark:text-white">Revise</strong> triggers auto-fix</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <AlertTriangle :size="20" class="text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">If <strong class="text-gray-900 dark:text-white">Rework</strong>, provide additional source documents (ADR, API spec, design doc) and re-run</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <User :size="20" class="text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">After review, a QE lead or test engineer should sign off by adding <code class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 text-xs rounded font-mono">test-plan-human-sign-off</code> in Jira</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Jira labels (collapsible) -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mb-6">
+          <button
+            @click="testPlanLabelsExpanded = !testPlanLabelsExpanded"
+            class="flex items-center justify-between w-full p-5"
+          >
+            <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Jira Labels Reference</h3>
+            <ChevronDown
+              :size="16"
+              class="text-gray-400 dark:text-gray-500 transition-transform"
+              :class="testPlanLabelsExpanded ? 'rotate-180' : ''"
+            />
+          </button>
+          <div v-if="testPlanLabelsExpanded" class="px-5 pb-5 -mt-1">
+            <div class="space-y-2">
+              <div v-for="l in testPlanLabels" :key="l.name" class="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                <code class="text-xs px-2 py-0.5 rounded whitespace-nowrap font-mono" :class="labelColorClasses(l.color)">{{ l.name }}</code>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ l.desc }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What's Next -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 mb-6">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">What's next</h3>
+          <div class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-lg">
+            <ChevronsRight :size="20" class="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white">Security Review</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">After the test plan is approved, the next step is Security Review — but this stage of the pipeline hasn't been implemented yet. Coming soon.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Links -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+          <h4 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Tools &amp; Resources</h4>
+          <div class="flex gap-2 flex-wrap mb-5">
+            <a
+              v-for="link in testPlanToolLinks"
+              :key="link.label"
+              :href="link.url"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              <component :is="link.icon" :size="14" class="text-gray-400 dark:text-gray-500" />
+              {{ link.label }}
+            </a>
+          </div>
+
+          <h4 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Community</h4>
+          <div class="flex gap-2 flex-wrap">
+            <a
+              v-for="link in testPlanCommunityLinks"
               :key="link.label"
               :href="link.url"
               target="_blank"
