@@ -58,12 +58,23 @@ async function runSync(readFromStorage) {
 }
 
 module.exports = function registerTestPlanRoutes(router, context) {
-  const { storage, requireAdmin } = context;
+  const { storage, requireAdmin, requireScope } = context;
   const { readFromStorage } = storage;
 
   // ─── 1. Static routes FIRST ───
 
-  router.get('/test-plans/status', requireAdmin, function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans/status:
+   *   get:
+   *     summary: Get test plan data status
+   *     tags: [AI Impact - Test Plans]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200:
+   *         description: Test plan data status
+   */
+  router.get('/test-plans/status', requireAdmin, requireScope('ai-impact:read'), function(req, res) {
     const data = readTestPlans(readFromStorage);
     res.json({
       lastSyncedAt: data.lastSyncedAt,
@@ -73,13 +84,32 @@ module.exports = function registerTestPlanRoutes(router, context) {
     });
   });
 
-  // GET /test-plans/sync/status — sync state for polling
-  router.get('/test-plans/sync/status', function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans/sync/status:
+   *   get:
+   *     summary: Get test plan Jira sync status
+   *     tags: [AI Impact - Test Plans]
+   *     responses:
+   *       200:
+   *         description: Sync state for polling
+   */
+  router.get('/test-plans/sync/status', requireScope('ai-impact:read'), function(req, res) {
     res.json(syncState);
   });
 
-  // POST /test-plans/sync (Admin) — trigger Jira label sync
-  router.post('/test-plans/sync', requireAdmin, async function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans/sync:
+   *   post:
+   *     summary: Trigger test plan Jira label sync
+   *     tags: [AI Impact - Test Plans]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200:
+   *         description: Sync started or skipped
+   */
+  router.post('/test-plans/sync', requireAdmin, requireScope('ai-impact:write'), async function(req, res) {
     if (DEMO_MODE) {
       return res.json({ status: 'skipped', message: 'Sync disabled in demo mode' });
     }
@@ -91,7 +121,27 @@ module.exports = function registerTestPlanRoutes(router, context) {
     runSync(readFromStorage);
   });
 
-  router.post('/test-plans/bulk', requireAdmin, jsonLimit, function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans/bulk:
+   *   post:
+   *     summary: Bulk upsert test plans
+   *     tags: [AI Impact - Test Plans]
+   *     security: [{ bearerAuth: [] }]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               testPlans:
+   *                 type: array
+   *     responses:
+   *       200:
+   *         description: Bulk upsert results
+   */
+  router.post('/test-plans/bulk', requireAdmin, requireScope('ai-impact:write'), jsonLimit, function(req, res) {
     if (DEMO_MODE) {
       return res.json({ status: 'skipped', message: 'Test plan ingest disabled in demo mode' });
     }
@@ -148,7 +198,18 @@ module.exports = function registerTestPlanRoutes(router, context) {
     }
   });
 
-  router.delete('/test-plans', requireAdmin, function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans:
+   *   delete:
+   *     summary: Clear all test plan data
+   *     tags: [AI Impact - Test Plans]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200:
+   *         description: Test plan data cleared
+   */
+  router.delete('/test-plans', requireAdmin, requireScope('ai-impact:write'), function(req, res) {
     if (DEMO_MODE) {
       return res.json({ status: 'skipped', message: 'Test plan ingest disabled in demo mode' });
     }
@@ -157,14 +218,42 @@ module.exports = function registerTestPlanRoutes(router, context) {
     res.json({ status: 'cleared' });
   });
 
-  router.get('/test-plans', function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans:
+   *   get:
+   *     summary: List all test plans (slim projection)
+   *     tags: [AI Impact - Test Plans]
+   *     responses:
+   *       200:
+   *         description: All test plans with latest scores
+   */
+  router.get('/test-plans', requireScope('ai-impact:read'), function(req, res) {
     const data = readTestPlans(readFromStorage);
     res.json(getLatestProjection(data));
   });
 
   // ─── 2. Parameterized routes AFTER ───
 
-  router.get('/test-plans/:key', function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans/{key}:
+   *   get:
+   *     summary: Get single test plan with history
+   *     tags: [AI Impact - Test Plans]
+   *     parameters:
+   *       - name: key
+   *         in: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Test plan detail with history
+   *       404:
+   *         description: Not found
+   */
+  router.get('/test-plans/:key', requireScope('ai-impact:read'), function(req, res) {
     const data = readTestPlans(readFromStorage);
     const entry = data.testPlans[req.params.key];
     if (!entry) {
@@ -176,7 +265,32 @@ module.exports = function registerTestPlanRoutes(router, context) {
     });
   });
 
-  router.put('/test-plans/:key', requireAdmin, jsonLimit, function(req, res) {
+  /**
+   * @openapi
+   * /api/modules/ai-impact/test-plans/{key}:
+   *   put:
+   *     summary: Upsert single test plan
+   *     tags: [AI Impact - Test Plans]
+   *     security: [{ bearerAuth: [] }]
+   *     parameters:
+   *       - name: key
+   *         in: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Upsert result
+   *       400:
+   *         description: Validation errors
+   */
+  router.put('/test-plans/:key', requireAdmin, requireScope('ai-impact:write'), jsonLimit, function(req, res) {
     if (DEMO_MODE) {
       return res.json({ status: 'skipped', message: 'Test plan ingest disabled in demo mode' });
     }
