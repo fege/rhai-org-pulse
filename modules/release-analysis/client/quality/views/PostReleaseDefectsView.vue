@@ -61,7 +61,7 @@
             <tr v-for="(dataset, i) in chartData.datasets" :key="i" class="border-b dark:border-gray-700">
               <td class="py-2">{{ dataset.label }}</td>
               <td class="text-right">{{ dataset.data.length > 0 ? dataset.data[dataset.data.length - 1] : 0 }}</td>
-              <td class="text-right">{{ chartData.labels.length - 1 }}</td>
+              <td class="text-right">{{ getLastBugDay(dataset.data) }}</td>
             </tr>
           </tbody>
         </table>
@@ -133,6 +133,19 @@ watch(selectedComponent, async () => {
     error.value = err.message || 'Failed to filter versions by component';
   }
 });
+
+function getLastBugDay(data) {
+  if (!data || data.length === 0) return 0;
+  // Find the last day where the count changed (last bug filed)
+  const finalCount = data[data.length - 1];
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i] < finalCount) {
+      return i + 1; // The day after the last change is the last bug day
+    }
+  }
+  // If count never changed (all zeros or bug on day 0), return 0
+  return finalCount > 0 ? 0 : 0;
+}
 
 watch(selectedVersions, async () => {
   try {
