@@ -122,9 +122,6 @@ test.describe('AI Impact Disabled Menu Items @ai-impact', () => {
     await testDisabledMenuItem(page, 'Security Review');
   });
 
-  test('Build & Release menu item should be disabled', async ({ page }) => {
-    await testDisabledMenuItem(page, 'Build & Release');
-  });
 });
 
 /**
@@ -189,5 +186,9 @@ test.describe('AI Impact Views @ai-impact', () => {
 
   test('should load Test Plan Review view', async ({ page }) => {
     await testView(page, 'test-plan-review', 'Test Plan Review');
+  });
+
+  test('should load Build & Release view', async ({ page }) => {
+    await testView(page, 'build-release', 'Build & Release');
   });
 });
