@@ -293,6 +293,7 @@ All routes prefixed with `/api`. Authenticated via OAuth proxy in production.
 - `/api/modules/releases/delivery/quality/versions` — quality versions with bug counts
 - `/api/modules/releases/delivery/quality/bugs` — cumulative bug data for selected versions
 - `/api/modules/releases/delivery/quality/components` — components with bug counts
+- `/api/modules/releases/delivery/quality/debug` — debug diagnostics for bug count issues (admin)
 - `/api/modules/ai-impact/assessments` — all assessments
 - `/api/modules/ai-impact/assessments/:key` — single assessment + history
 - `/api/modules/ai-impact/assessments/status` — assessment status (admin)
