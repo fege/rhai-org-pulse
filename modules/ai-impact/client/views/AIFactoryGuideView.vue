@@ -207,6 +207,17 @@ const testPlanCommunityLinks = [
   { label: '#wg-rhai-quality-eng-builder', icon: MessageSquare, url: 'https://app.slack.com/client/E030G10V24F/C0ANMTUF5FW' },
 ]
 
+const docLearnLinks = [
+  { label: 'Enablement Recording', icon: Play, url: 'https://drive.google.com/file/d/1A0JARScdMm1mnoHBj7P9mOULtNumWmDM/view' },
+  { label: 'Slides', icon: FileText, url: 'https://docs.google.com/presentation/d/1Nv8Pp7fNRSzgED8B7p7KaBg1OaPnI011iA41EY-tCzo/edit?slide=id.g3e334837aa4_0_0#slide=id.g3e334837aa4_0_0' },
+  { label: 'Notes', icon: StickyNote, url: 'https://docs.google.com/document/d/1D6-LmPIYRqLAWL5adDN8iVCmuV1Dz_JYkN3w7P7TYXw/edit?tab=t.p8v68m1kpy1y' },
+]
+
+const docCommunityLinks = [
+  { label: '#wg-rhai-document-builder', icon: MessageSquare, url: 'https://redhat.enterprise.slack.com/archives/C0APCEUR196' },
+  { label: '#forum-rhai-ai-first', icon: HelpCircle, url: 'https://app.slack.com/client/E030G10V24F/C0APP9DDB2R' },
+]
+
 function labelColorClasses(color) {
   const map = {
     green: 'bg-green-500/15 text-green-600 dark:text-green-400',
@@ -1137,6 +1148,39 @@ function labelColorClasses(color) {
               <span class="text-sm text-gray-700 dark:text-gray-300">If a feature appears in the demand pool but already has documentation or release notes, add the <code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 text-xs rounded font-mono">ai1st-doc-skip</code> label to the Jira issue. Preferably add a comment explaining why (e.g. "Docs already published in 3.x release notes")</span>
             </li>
           </ul>
+        </div>
+
+        <!-- Links -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+          <h4 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Learn</h4>
+          <div class="flex gap-2 flex-wrap mb-5">
+            <a
+              v-for="link in docLearnLinks"
+              :key="link.label"
+              :href="link.url"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              <component :is="link.icon" :size="14" class="text-gray-400 dark:text-gray-500" />
+              {{ link.label }}
+            </a>
+          </div>
+
+          <h4 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Community</h4>
+          <div class="flex gap-2 flex-wrap">
+            <a
+              v-for="link in docCommunityLinks"
+              :key="link.label"
+              :href="link.url"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              <component :is="link.icon" :size="14" class="text-gray-400 dark:text-gray-500" />
+              {{ link.label }}
+            </a>
+          </div>
         </div>
       </div>
     </div>
