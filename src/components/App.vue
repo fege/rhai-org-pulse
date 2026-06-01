@@ -837,17 +837,7 @@ export default {
       this.showRefreshModal = false
       this.isRefreshing = true
       try {
-        const refreshes = [refreshMetrics({ scope: 'all', force, sources })]
-        if (this.enabledBuiltInSlugs?.includes('team-tracker')) {
-          refreshes.push(
-            apiRequest('/modules/team-tracker/allocation/refresh', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ hardRefresh: force })
-            }).catch(err => console.error('Allocation refresh failed:', err))
-          )
-        }
-        await Promise.all(refreshes)
+        await refreshMetrics({ scope: 'all', force, sources })
         this.showToast('Refresh started — data will update shortly')
       } catch (err) {
         console.error('Failed to start refresh:', err)
