@@ -122,7 +122,7 @@ module.exports = function registerRoutes(router, context) {
   }
 
   // Registry routes (top-level under /api/modules/releases/)
-  registerRegistryRoutes(router, { storage, requireAuth, requireReleaseManager, requireScope });
+  registerRegistryRoutes(router, { storage, requireAuth, requireReleaseManager, requireScope, registerRefresh: context.registerRefresh || null, isRefreshRunning: context.isRefreshRunning || null });
 
   // Planning sub-router (mounted at /api/modules/releases/planning/)
   var planningRouter = express.Router();
@@ -144,7 +144,9 @@ module.exports = function registerRoutes(router, context) {
     requireAuth,
     requireAdmin,
     requireScope,
-    registerDiagnostics: context.registerDiagnostics || null
+    registerDiagnostics: context.registerDiagnostics || null,
+    registerRefresh: context.registerRefresh || null,
+    isRefreshRunning: context.isRefreshRunning || null
   });
   router.use('/execution', executionRouter);
 
@@ -155,7 +157,9 @@ module.exports = function registerRoutes(router, context) {
     requireAuth,
     requireAdmin,
     requireScope,
-    registerDiagnostics: context.registerDiagnostics || null
+    registerDiagnostics: context.registerDiagnostics || null,
+    registerRefresh: context.registerRefresh || null,
+    isRefreshRunning: context.isRefreshRunning || null
   });
   router.use('/delivery', deliveryRouter);
 
@@ -167,7 +171,9 @@ module.exports = function registerRoutes(router, context) {
     requireAdmin,
     requireReleaseManager,
     requireScope,
-    registerDiagnostics: context.registerDiagnostics || null
+    registerDiagnostics: context.registerDiagnostics || null,
+    registerRefresh: context.registerRefresh || null,
+    isRefreshRunning: context.isRefreshRunning || null
   });
   router.use('/hygiene', hygieneRouter);
 
