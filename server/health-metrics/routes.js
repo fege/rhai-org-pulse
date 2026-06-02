@@ -2,14 +2,19 @@ const express = require('express');
 const { createEventStore } = require('./event-store');
 const { aggregateEvents, mergeDailyBreakdown } = require('./aggregator');
 
-function createHealthMetricsRouter(context) {
+function createHealthMetricsRouter(context, { eventsDir } = {}) {
   const { storage, requireAdmin, requireScope, roleStore } = context;
-  const { readFromStorage, writeToStorage } = storage;
-  const { DATA_DIR } = require('../../shared/server/storage');
+  const { readFromStorage, writeToStorage, getFileMtime, listStorageFiles } = storage;
 
   const router = express.Router();
   const DEMO_MODE = process.env.DEMO_MODE === 'true';
-  const eventStore = createEventStore(DATA_DIR);
+  const eventStore = DEMO_MODE ? null : createEventStore(eventsDir);
+
+  // Pure date formatting — extracted so it works when eventStore is null (demo mode)
+  function getMonthKey(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
 
   // ─── In-memory user-type cache ───
 
@@ -34,6 +39,7 @@ function createHealthMetricsRouter(context) {
     userTypeCache.clear();
     if (!configuredFieldId) return;
 
+    // Cross-module read: team-tracker exports team-data/registry.json (see module.json > export.files)
     const registry = readFromStorage('team-data/registry.json');
     if (!registry?.people) return;
 
@@ -51,17 +57,10 @@ function createHealthMetricsRouter(context) {
 
   // Poll registry mtime every 60s to detect roster sync changes
   const registryCheckInterval = setInterval(() => {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const registryPath = path.join(DATA_DIR, 'team-data', 'registry.json');
-      const stat = fs.statSync(registryPath);
-      if (stat.mtimeMs > registryMtime) {
-        registryMtime = stat.mtimeMs;
-        rebuildUserTypeCache();
-      }
-    } catch {
-      // registry file may not exist yet
+    const mtime = getFileMtime('team-data/registry.json');
+    if (mtime && mtime > registryMtime) {
+      registryMtime = mtime;
+      rebuildUserTypeCache();
     }
   }, 60_000);
 
@@ -110,9 +109,12 @@ function createHealthMetricsRouter(context) {
     const stored = readFromStorage(`health-metrics/aggregates/${monthKey}.json`);
     if (stored) return stored;
 
+    // No raw events in demo mode — only pre-computed aggregates are available
+    if (!eventStore) return null;
+
     // For current month, use in-memory cache with TTL
     const now = Date.now();
-    const currentMonth = eventStore.getMonthKey(new Date());
+    const currentMonth = getMonthKey(new Date());
     if (monthKey === currentMonth && currentMonthAggregate && (now - currentMonthAggregateAt) < AGGREGATE_TTL_MS) {
       return currentMonthAggregate;
     }
@@ -141,7 +143,7 @@ function createHealthMetricsRouter(context) {
     const retentionDays = config.retentionDays || 90;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - retentionDays);
-    const cutoffMonth = eventStore.getMonthKey(cutoff);
+    const cutoffMonth = getMonthKey(cutoff);
     const cutoffTs = cutoff.toISOString();
 
     const monthFiles = eventStore.listMonthFiles();
@@ -206,13 +208,13 @@ function createHealthMetricsRouter(context) {
   // ─── Helper: collect aggregates for a date range ───
 
   function collectAggregates(from, to) {
-    const fromMonth = eventStore.getMonthKey(new Date(from));
-    const toMonth = eventStore.getMonthKey(new Date(to));
+    const fromMonth = getMonthKey(new Date(from));
+    const toMonth = getMonthKey(new Date(to));
     const aggregates = [];
 
     // Scan stored aggregates
-    const storedFiles = (storage.listStorageFiles?.('health-metrics/aggregates') || []);
-    const monthFiles = eventStore.listMonthFiles();
+    const storedFiles = (listStorageFiles?.('health-metrics/aggregates') || []);
+    const monthFiles = eventStore ? eventStore.listMonthFiles() : [];
     const allMonths = new Set([
       ...storedFiles.map(f => f.replace('.json', '')),
       ...monthFiles,
@@ -364,8 +366,8 @@ function createHealthMetricsRouter(context) {
     }
 
     // Also compute daily breakdown from current month's raw events
-    const currentMonth = eventStore.getMonthKey(new Date());
     if (!DEMO_MODE) {
+      const currentMonth = getMonthKey(new Date());
       const events = eventStore.readMonth(currentMonth);
       const daily = mergeDailyBreakdown(events);
       Object.assign(dailyData, daily);
@@ -447,7 +449,7 @@ function createHealthMetricsRouter(context) {
     // Daily breakdown from raw events for current month
     let daily = {};
     if (!DEMO_MODE) {
-      const currentMonth = eventStore.getMonthKey(new Date());
+      const currentMonth = getMonthKey(new Date());
       const events = eventStore.readMonth(currentMonth).filter(e => e.page === pageId);
       daily = mergeDailyBreakdown(events);
     }
@@ -498,6 +500,7 @@ function createHealthMetricsRouter(context) {
   });
 
   router.post('/aggregate', requireAdmin, requireScope('health-metrics:write'), (req, res) => {
+    if (!eventStore) return res.json({ ok: true, generated: 0 });
     const monthFiles = eventStore.listMonthFiles();
     let generated = 0;
     for (const monthKey of monthFiles) {
@@ -512,7 +515,7 @@ function createHealthMetricsRouter(context) {
   });
 
   router.delete('/events', requireAdmin, requireScope('health-metrics:write'), (req, res) => {
-    eventStore.deleteAllEvents();
+    if (eventStore) eventStore.deleteAllEvents();
     invalidateCurrentMonthCache();
     res.json({ ok: true });
   });
@@ -520,6 +523,7 @@ function createHealthMetricsRouter(context) {
   // ─── Routes: Field definitions (for settings UI) ───
 
   router.get('/field-definitions', requireAdmin, requireScope('health-metrics:read'), (req, res) => {
+    // Cross-module read: team-tracker exports team-data/field-definitions.json (see module.json > export.files)
     const fieldDefs = readFromStorage('team-data/field-definitions.json');
     if (!fieldDefs) return res.json({ person: [], team: [] });
     // Return only person-level fields for user-type selection

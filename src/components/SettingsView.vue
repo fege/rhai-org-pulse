@@ -1,9 +1,9 @@
 <template>
-  <div class="max-w-3xl">
+  <div>
     <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Settings</h2>
 
     <!-- Tab bar -->
-    <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+    <div class="flex flex-wrap border-b border-gray-200 dark:border-gray-700 mb-6">
       <!-- General tab -->
       <button
         @click="activeTab = 'general'"

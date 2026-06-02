@@ -160,6 +160,25 @@ function deleteFromStorage(key) {
   }
 }
 
+/**
+ * Get the modification time of a storage file without reading it.
+ * @param {string} key - S3-style key
+ * @returns {number|null} mtime in milliseconds, or null if file doesn't exist or path is unsafe
+ */
+function getFileMtime(key) {
+  const filePath = path.resolve(DATA_DIR, key);
+  if (!isPathSafe(filePath)) {
+    console.error(`[storage] Blocked path traversal attempt: ${key}`);
+    return null;
+  }
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
 module.exports = {
   readFromStorage,
   writeToStorage,
@@ -167,5 +186,6 @@ module.exports = {
   listStorageFiles,
   deleteStorageDirectory,
   deleteFromStorage,
+  getFileMtime,
   DATA_DIR
 };

@@ -92,6 +92,26 @@ function deleteFromStorage(key) {
   console.log(`[Demo Mode] Delete ignored: ${key}`);
 }
 
+/**
+ * Get the modification time of a fixture file without reading it.
+ * In demo mode, mtimes are static — polling detects no changes (by design).
+ * @param {string} key - S3-style key
+ * @returns {number|null} mtime in milliseconds, or null if not found
+ */
+function getFileMtime(key) {
+  const filePath = path.resolve(FIXTURES_DIR, key);
+  if (!isPathSafe(filePath)) {
+    console.error(`[demo-storage] Blocked path traversal attempt: ${key}`);
+    return null;
+  }
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
 module.exports = {
   readFromStorage,
   writeToStorage,
@@ -99,5 +119,6 @@ module.exports = {
   listStorageFiles,
   deleteStorageDirectory,
   deleteFromStorage,
+  getFileMtime,
   FIXTURES_DIR
 };

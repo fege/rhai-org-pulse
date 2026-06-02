@@ -1,8 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-function createEventStore(dataDir) {
-  const eventsDir = path.join(dataDir, 'health-metrics', 'events');
+function createEventStore(eventsDir) {
 
   let isPruning = false;
   let pruneBuffer = [];

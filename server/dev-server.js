@@ -156,7 +156,9 @@ for (const s of platformScopes) {
   scopeRegistry.register(s.key, { ...s, module: 'platform' });
 }
 
-// Health-metrics roles and scopes (health-metrics is NOT a module — see plan A.1)
+// ─── Platform subsystem registrations (health-metrics) ───
+// Health-metrics is a platform concern, not a module. Its roles and scopes
+// are registered here alongside other platform registrations.
 roleRegistry.register('usage-metrics-viewer', {
   label: 'Usage Metrics Viewer',
   description: 'Can view health/usage metrics dashboards',
@@ -1562,8 +1564,11 @@ if (ttRouter && enabledSlugs.has('team-tracker')) {
 mountModuleRouters(app, builtInModules, moduleRouters);
 
 // ─── Health Metrics (core feature, not a module) ───
+const path = require('path');
 const { createHealthMetricsRouter } = require('./health-metrics/routes');
-app.use('/api/health-metrics', createHealthMetricsRouter(coreServices));
+const hmDataRoot = storageModule.DATA_DIR || storageModule.FIXTURES_DIR;
+const eventsDir = path.join(hmDataRoot, 'health-metrics', 'events');
+app.use('/api/health-metrics', createHealthMetricsRouter(coreServices, { eventsDir }));
 
 /**
  * @openapi

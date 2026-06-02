@@ -10,10 +10,7 @@ Read the "Hard Constraints" section in `AGENTS.md` at the repo root. Those
 constraints are the authoritative source — this file does not duplicate them.
 Flag any violation as a **blocking issue**.
 
-You have full Edit and Write access to all files in the repo, including
-`.claude/CLAUDE.md`. If a PR adds, modifies, or removes API endpoints, update
-the API Routes section in `.claude/CLAUDE.md` yourself as part of your autofix
-(Hard Constraint #7 in AGENTS.md).
+You have full Edit and Write access to all files in the repo.
 
 ## Review checklist
 

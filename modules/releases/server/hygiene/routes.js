@@ -694,7 +694,7 @@ module.exports = function registerHygieneRoutes(router, context) {
 
   // Diagnostics
   if (registerDiagnostics) {
-    registerDiagnostics('hygiene', function() {
+    registerDiagnostics(function() {
       return {
         refreshState: { running: refreshState.running, lastResult: refreshState.lastResult }
       };
