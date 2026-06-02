@@ -63,7 +63,8 @@ jobs:
           # Check if we've already commented on this PR to avoid spam
           COMMENT_EXISTS=$(gh pr view ${{ github.event.pull_request.number }} --json comments -q '.comments[] | select(.author.login=="github-actions") | select(.body | contains("AI Configuration Guard")) | .id' | head -1)
           if [ -z "$COMMENT_EXISTS" ]; then
-            gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ **AI Configuration Guard**\n\nThis PR modifies sensitive AI configuration files or workflows that require approval from: **${ALLOWED_APPROVERS}**\n\nThe following sensitive files were detected:\n${{ steps.check_sensitive_files.outputs.modified_files }}\nAn approval from one of the authorized users is required before this PR can be merged."
+            COMMENT_BODY=$(printf "⚠️ **AI Configuration Guard**\n\nThis PR modifies sensitive AI configuration files or workflows that require approval from: **%s**\n\nThe following sensitive files were detected:\n%s\nAn approval from one of the authorized users is required before this PR can be merged." "${ALLOWED_APPROVERS}" "${{ steps.check_sensitive_files.outputs.modified_files }}")
+            gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
           else
             echo "ℹ️ Comment already exists (ID: $COMMENT_EXISTS), skipping duplicate comment."
           fi
