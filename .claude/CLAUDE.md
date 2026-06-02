@@ -203,6 +203,8 @@ To add integration tests for a new module:
 2. Add filter definition in `integration-tests.yml` `detect-changes` job filters section
 3. That's it! The matrix automatically picks up the new module when it changes
 
+**Integration test enforcement:** PRs that modify files in `modules/` (views, components, server routes, server logic) **require** corresponding integration test updates. This is enforced during code review. See `.github/instructions/review.instructions.md` for the full policy and exceptions.
+
 ### Building images on ARM Macs
 Standard `--platform linux/amd64` builds fail: npm times out under QEMU, esbuild crashes. Workaround: build/install natively, then copy into amd64 base images. See `deploy/OPENSHIFT.md` step 3 for details. This works because the backend has no native Node addons (all pure JS).
 
