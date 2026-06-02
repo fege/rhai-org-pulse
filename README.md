@@ -96,13 +96,19 @@ To use the Google Sheets roster sync:
 ## Commands
 
 ```bash
-npm run dev:full     # Start frontend + backend
-npm run dev          # Frontend only (Vite)
-npm run dev:server   # Backend only (Express, needs .env)
-npm test             # Run all tests
-npm run test:watch   # Tests in watch mode
-npm run lint         # ESLint
-npm run build        # Production build
+npm run dev:full              # Start frontend + backend
+npm run dev                   # Frontend only (Vite)
+npm run dev:server            # Backend only (Express, needs .env)
+npm test                      # Run all tests
+npm run test:watch            # Tests in watch mode
+npm run lint                  # ESLint
+npm run build                 # Production build
+npm run validate:modules      # Validate module manifests
+npm run validate:openapi      # Validate OpenAPI annotations
+
+# Container-based tests (requires Docker/Podman)
+make smoke-test               # Run smoke tests against containers
+make test-module MODULE=<name>  # Run integration tests for a module
 ```
 
 ## Tech Stack
@@ -112,7 +118,7 @@ npm run build        # Production build
 - **Auth**: OpenShift OAuth proxy (production), no auth (local dev)
 - **Storage**: Local filesystem (`./data/`), PVC in OpenShift
 - **Hosting**: OpenShift with ArgoCD
-- **Testing**: Vitest
+- **Testing**: Vitest (unit), Playwright (smoke & integration)
 
 ## Deployment
 

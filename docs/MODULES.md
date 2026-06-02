@@ -260,10 +260,12 @@ The component will be rendered as a tab in the shell's Settings page.
 
 ## Testing
 
+- **Unit tests**: Use Vitest with @vue/test-utils for frontend, Vitest for backend
 - Frontend tests: `modules/your-module/__tests__/client/`
 - Backend tests: `modules/your-module/__tests__/server/` or `modules/your-module/server/__tests__/`
 - Run all tests: `npm test`
 - Module manifest validation: `npm run validate:modules`
+- **Integration tests**: Playwright tests in `tests/integration/` validate module UI (see CONTRIBUTING.md)
 
 ## CODEOWNERS
 

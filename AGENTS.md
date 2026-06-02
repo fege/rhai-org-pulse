@@ -76,6 +76,8 @@ Documentation changes must land in the same PR as the code they describe:
 - **Module system changes** → update `docs/MODULES.md`
 - **API route changes** → update the API Routes section in `.claude/CLAUDE.md`
 - **Node.js version changes** → update `README.md` and `CONTRIBUTING.md` to match `package.json` engines field
+- **npm scripts or Makefile commands** (additions, removals, or changes) → update Commands section in `README.md`
+- **Testing stack changes** (test frameworks added/removed from `package.json` devDependencies, test types added/removed from `tests/`, or test-related scripts/Makefile targets added/removed/changed) → update `README.md` (Tech Stack), `docs/MODULES.md` (Testing), and `CONTRIBUTING.md` (Testing)
 
 ## Code Style
 
@@ -109,7 +111,9 @@ npm run dev:server            # Express only (needs .env)
 npm test                      # Run all tests
 npm run test:watch            # Watch mode
 npm run lint                  # Lint check
+npm run build                 # Production build
 npm run validate:modules      # Validate module manifests
+npm run validate:openapi      # Validate OpenAPI annotations
 
 # Container-based tests (requires Docker/Podman)
 make smoke-test               # Run smoke tests against containers
