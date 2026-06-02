@@ -82,7 +82,7 @@ jobs:
 
           # Check if any allowed approver has approved
           APPROVED=false
-          for approver in $ALLOWED_APPROVERS; do
+            if echo "$REVIEWS" | grep -qx "$approver"; then
             if echo "$REVIEWS" | grep -q "$approver"; then
               echo "✅ Approved by @$approver. This PR can be merged to main."
               APPROVED=true
