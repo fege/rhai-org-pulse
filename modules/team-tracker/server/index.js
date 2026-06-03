@@ -4246,7 +4246,7 @@ module.exports = function registerRoutes(router, context) {
     try {
       const syncConfig = rosterSyncConfig.loadConfig({ readFromStorage, writeToStorage }) || {};
       const gitlabInstances = syncConfig.gitlabInstances || [];
-      const results = await fetchGitlabData(usernames, { gitlabInstances });
+      const results = await fetchGitlabData(usernames, { gitlabInstances, resolveSecret: context.resolveSecret });
       writeSinglePassResults(results, GITLAB_CACHE_PATH, GITLAB_HISTORY_CACHE_PATH);
       console.log(`[refresh] GitLab: ${Object.keys(results).length} users processed`);
     } catch (err) {
