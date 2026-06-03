@@ -1,6 +1,8 @@
-const { jiraRequest, JIRA_HOST, fetchAllJqlResults } = require('../../../../shared/server/jira')
+const sharedJira = require('../../../../shared/server/jira')
+var { jiraRequest, JIRA_HOST, fetchAllJqlResults } = sharedJira
 const { getConfig, saveConfig, deleteConfig } = require('./config')
-const { fetchProductsByShortname, fetchAllProducts, getProductPagesToken, getAuthStatus } = require('./product-pages')
+const productPages = require('./product-pages')
+const { fetchProductsByShortname, fetchAllProducts, getProductPagesToken, getAuthStatus } = productPages
 const registerConformaRoutes = require('./conforma')
 const { logAudit } = require('../planning/audit-log')
 
@@ -123,6 +125,23 @@ function extractVersionNamesFromField(fields, fieldId) {
   }
   const n = normalizeVersionNameFromJira(raw)
   return n ? [n] : []
+}
+
+/**
+ * Build regex patterns for phase-aware version matching.
+ * Match base version OR phase-specific version, but NOT other phases or z-stream.
+ * Examples for "3.4 EA1":
+ *   MATCH: rhoai-3.4, rhoai-3.4.EA1, RHAII-3.4 EA1
+ *   NO MATCH: rhoai-3.4.EA2, rhoai-3.4.1, RHAII-3.4 EA2
+ */
+function buildPhaseVersionPatterns(version, phase) {
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escapedPhase = phase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return [
+    new RegExp(`-${escaped}$`),                    // Pattern 1: base version (e.g., "rhoai-3.4")
+    new RegExp(`-${escaped}\\.${escapedPhase}$`),  // Pattern 2: dot-separated phase (e.g., "rhoai-3.4.EA1")
+    new RegExp(`-${escaped}\\s+${escapedPhase}$`)  // Pattern 3: space-separated phase (e.g., "RHAII-3.4 EA1")
+  ]
 }
 
 function extractFixVersions(issue) {
@@ -1032,6 +1051,15 @@ async function runFullAnalysis(storage, config) {
 const CACHE_MAX_AGE_MS = 60 * 60 * 1000 // 1 hour
 
 module.exports = function registerRoutes(router, context) {
+  // Initialize product-pages with secrets
+  if (context.secrets) productPages.init(context.secrets)
+
+  // Override module-level jira vars with factory client when available
+  if (context.jira) {
+    jiraRequest = context.jira.jiraRequest
+    JIRA_HOST = context.jira.JIRA_HOST
+  }
+
   registerConformaRoutes(router, context)
 
   const { storage, requireAuth, requireAdmin, requireScope } = context
@@ -1322,9 +1350,8 @@ module.exports = function registerRoutes(router, context) {
         { maxResults: 100 }
       )
 
-      // Filter to features matching this version
-      const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const versionPattern = new RegExp(`\\b${escaped}\\b`)
+      // Filter to features matching this version + phase
+      const [basePattern, dotPhasePattern, spacePhasePattern] = buildPhaseVersionPatterns(version, phase)
 
       const deliveryIssues = []
       const seenKeys = new Set()
@@ -1333,7 +1360,7 @@ module.exports = function registerRoutes(router, context) {
         const targetVersions = issue.fields?.customfield_10855 || []
         const hasMatchingVersion = targetVersions.some(v => {
           const val = v?.name || v?.value || ''
-          return versionPattern.test(val)
+          return basePattern.test(val) || dotPhasePattern.test(val) || spacePhasePattern.test(val)
         })
 
         if (hasMatchingVersion && !seenKeys.has(issue.key)) {
@@ -1601,9 +1628,8 @@ module.exports = function registerRoutes(router, context) {
 
       console.log(`[releases/delivery] Found ${allFeatures.length} total features`)
 
-      // Filter to features matching this version (via Target Version field cf[10855])
-      const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const versionPattern = new RegExp(`\\b${escaped}\\b`)
+      // Filter to features matching this version + phase (via Target Version field cf[10855])
+      const [basePattern, dotPhasePattern, spacePhasePattern] = buildPhaseVersionPatterns(version, phase)
 
       const features = []
       const seenKeys = new Set()
@@ -1613,7 +1639,7 @@ module.exports = function registerRoutes(router, context) {
         const hasMatchingVersion = targetVersions.some(v => {
           // Target Version field returns Jira version objects with 'name' property
           const val = v?.name || v?.value || ''
-          return versionPattern.test(val)
+          return basePattern.test(val) || dotPhasePattern.test(val) || spacePhasePattern.test(val)
         })
 
         if (hasMatchingVersion && !seenKeys.has(issue.key)) {
