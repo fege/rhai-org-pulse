@@ -109,21 +109,8 @@ function migrateStoragePaths(storage) {
 }
 
 module.exports = function registerRoutes(router, context) {
-  const { storage, requireAuth, requireAdmin, requireRole, requireScope, roleStore, secrets } = context;
+  const { storage, requireAuth, requireAdmin, requireRole, requireScope, roleStore } = context;
   const requireReleaseManager = requireRole('release-manager');
-
-  // Create shared clients from context.secrets
-  const { createJiraClient } = require('../../../shared/server/jira');
-  const jira = createJiraClient({
-    email: (secrets && secrets.JIRA_EMAIL) || '',
-    token: (secrets && secrets.JIRA_TOKEN) || '',
-    host: process.env.JIRA_HOST
-  });
-  const { createSmartsheetClient } = require('../../../shared/server/smartsheet');
-  const smartsheet = createSmartsheetClient({
-    apiToken: secrets && secrets.SMARTSHEET_API_TOKEN,
-    sheetId: process.env.SMARTSHEET_SHEET_ID
-  });
 
   // Register release-manager role
   context.registerRole('release-manager', {
@@ -149,7 +136,7 @@ module.exports = function registerRoutes(router, context) {
   }
 
   // Registry routes (top-level under /api/modules/releases/)
-  registerRegistryRoutes(router, { storage, requireAuth, requireReleaseManager, requireScope, registerRefresh: context.registerRefresh || null, isRefreshRunning: context.isRefreshRunning || null });
+  registerRegistryRoutes(router, { storage, requireAuth, requireReleaseManager, requireScope });
 
   // Planning sub-router (mounted at /api/modules/releases/planning/)
   var planningRouter = express.Router();
@@ -160,9 +147,6 @@ module.exports = function registerRoutes(router, context) {
     requireReleaseManager,
     requireScope,
     roleStore,
-    secrets,
-    jira,
-    smartsheet,
     registerDiagnostics: context.registerDiagnostics || null
   });
   router.use('/planning', planningRouter);
@@ -174,11 +158,7 @@ module.exports = function registerRoutes(router, context) {
     requireAuth,
     requireAdmin,
     requireScope,
-    secrets,
-    jira,
-    registerDiagnostics: context.registerDiagnostics || null,
-    registerRefresh: context.registerRefresh || null,
-    isRefreshRunning: context.isRefreshRunning || null
+    registerDiagnostics: context.registerDiagnostics || null
   });
   registerFeatureTrackingRoutes(executionRouter, {
     storage,
@@ -195,11 +175,7 @@ module.exports = function registerRoutes(router, context) {
     requireAuth,
     requireAdmin,
     requireScope,
-    secrets,
-    jira,
-    registerDiagnostics: context.registerDiagnostics || null,
-    registerRefresh: context.registerRefresh || null,
-    isRefreshRunning: context.isRefreshRunning || null
+    registerDiagnostics: context.registerDiagnostics || null
   });
   router.use('/delivery', deliveryRouter);
 
@@ -211,9 +187,7 @@ module.exports = function registerRoutes(router, context) {
     requireAdmin,
     requireReleaseManager,
     requireScope,
-    registerDiagnostics: context.registerDiagnostics || null,
-    registerRefresh: context.registerRefresh || null,
-    isRefreshRunning: context.isRefreshRunning || null
+    registerDiagnostics: context.registerDiagnostics || null
   });
   router.use('/hygiene', hygieneRouter);
 

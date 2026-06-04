@@ -11,7 +11,7 @@ const RFE_STATES = {
 }
 
 const FEATURE_STATES = {
-  REJECTED: { id: 'rejected', label: 'Rejected', color: 'red', order: 0 },
+  REJECTED: { id: 'rejected', label: 'RFE Rejected', color: 'red', order: 0 },
   REVISE_REQUIRED: { id: 'revise-required', label: 'Revise Required', color: 'red', order: 1 },
   AWAITING_SIGNOFF: { id: 'awaiting-signoff', label: 'Awaiting Sign-off', color: 'amber', order: 2 },
   SIGNED_OFF: { id: 'signed-off', label: 'Signed Off', color: 'green', order: 3 }

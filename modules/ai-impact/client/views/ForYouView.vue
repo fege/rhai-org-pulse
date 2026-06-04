@@ -130,7 +130,7 @@ const stageOptions = [
   { value: 'passed-with-caveats', label: 'Passed with Caveats' },
   { value: 'ready-to-advance', label: 'Ready for Feature Creation' },
   { value: 'queued-for-pipeline', label: 'Queued for Feature Creation' },
-  { value: 'rejected', label: 'Rejected' },
+  { value: 'rejected', label: 'RFE Rejected' },
   { value: 'revise-required', label: 'Revise Required' },
   { value: 'awaiting-signoff', label: 'Awaiting Sign-off' },
   { value: 'signed-off', label: 'Signed Off' }

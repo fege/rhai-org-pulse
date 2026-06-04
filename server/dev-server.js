@@ -47,84 +47,7 @@ const {
   wasMountedAtStartup
 } = require('./module-loader');
 
-const { SecretRegistry } = require('../shared/server/secret-registry');
-const platformSecretGroups = require('../shared/server/platform-secrets');
-
 const builtInModules = getDiscoveredModules();
-
-// ─── Secret Registry ───
-
-const secretRegistry = new SecretRegistry(platformSecretGroups);
-for (const mod of builtInModules) {
-  if (mod.secrets) {
-    secretRegistry.registerModuleSecrets(mod.slug, mod.secrets);
-  }
-}
-secretRegistry.resolve();
-
-// ─── Platform Secret Validators ───
-
-const nodeFetch = require('node-fetch');
-
-secretRegistry.registerValidator('JIRA_TOKEN', async () => {
-  const email = process.env.JIRA_EMAIL;
-  const token = process.env.JIRA_TOKEN;
-  if (!email || !token) return { valid: false, message: 'JIRA_EMAIL or JIRA_TOKEN not configured' };
-  const host = process.env.JIRA_HOST || 'https://redhat.atlassian.net';
-  const auth = Buffer.from(`${email}:${token}`).toString('base64');
-  const res = await nodeFetch(`${host}/rest/api/2/myself`, {
-    headers: { Authorization: `Basic ${auth}`, Accept: 'application/json' }
-  });
-  if (!res.ok) return { valid: false, message: `Jira auth failed (${res.status})` };
-  const data = await res.json();
-  return { valid: true, message: `Authenticated as ${data.displayName || data.emailAddress}` };
-});
-
-secretRegistry.registerValidator('GITHUB_TOKEN', async () => {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) return { valid: false, message: 'GITHUB_TOKEN not configured' };
-  const res = await nodeFetch('https://api.github.com/user', {
-    headers: { Authorization: `token ${token}`, Accept: 'application/json' }
-  });
-  if (!res.ok) return { valid: false, message: `GitHub auth failed (${res.status})` };
-  const data = await res.json();
-  return { valid: true, message: `Authenticated as ${data.login}` };
-});
-
-secretRegistry.registerValidator('GITLAB_TOKEN', async () => {
-  const token = process.env.GITLAB_TOKEN;
-  if (!token) return { valid: false, message: 'GITLAB_TOKEN not configured' };
-  const host = process.env.GITLAB_BASE_URL || 'https://gitlab.com';
-  const res = await nodeFetch(`${host}/api/v4/user`, {
-    headers: { 'PRIVATE-TOKEN': token, Accept: 'application/json' }
-  });
-  if (!res.ok) return { valid: false, message: `GitLab auth failed (${res.status})` };
-  const data = await res.json();
-  return { valid: true, message: `Authenticated as ${data.username}` };
-});
-
-secretRegistry.registerValidator('IPA_BIND_DN', async () => {
-  const bindDn = process.env.IPA_BIND_DN;
-  const bindPassword = process.env.IPA_BIND_PASSWORD;
-  if (!bindDn || !bindPassword) return { valid: false, message: 'IPA_BIND_DN or IPA_BIND_PASSWORD not configured' };
-  const { createIpaClient } = require('../shared/server/roster-sync/ipa-client');
-  const ipa = createIpaClient({ bindDn, bindPassword });
-  const result = await ipa.testConnection();
-  return { valid: result.ok, message: result.message };
-});
-
-secretRegistry.registerValidator('GOOGLE_SERVICE_ACCOUNT_KEY_FILE', async () => {
-  const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || '/etc/secrets/google-sa-key.json';
-  const fs = require('fs');
-  if (!fs.existsSync(keyFile)) return { valid: false, message: `Key file not found at ${keyFile}` };
-  try {
-    const { createGoogleSheetsClient } = require('../shared/server/google-sheets');
-    createGoogleSheetsClient({ keyFile });
-    return { valid: true, message: `Key file found at ${keyFile}` };
-  } catch (err) {
-    return { valid: false, message: err.message };
-  }
-});
 
 if (DEMO_MODE) {
   console.log('Running in DEMO MODE - using fixture data, Jira/GitHub APIs disabled');
@@ -156,9 +79,7 @@ for (const s of platformScopes) {
   scopeRegistry.register(s.key, { ...s, module: 'platform' });
 }
 
-// ─── Platform subsystem registrations (health-metrics) ───
-// Health-metrics is a platform concern, not a module. Its roles and scopes
-// are registered here alongside other platform registrations.
+// Health-metrics roles and scopes (health-metrics is NOT a module — see plan A.1)
 roleRegistry.register('usage-metrics-viewer', {
   label: 'Usage Metrics Viewer',
   description: 'Can view health/usage metrics dashboards',
@@ -679,85 +600,6 @@ app.post('/api/admin/backup/restore', requireAdmin, requireScope('admin:manage')
     res.json(result);
   } catch (error) {
     console.error('[backup] Restore failed:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * @openapi
- * /api/admin/refresh-all:
- *   post:
- *     tags: [Admin]
- *     summary: Trigger a full refresh of all registered handlers (admin only)
- *     responses:
- *       202:
- *         description: Refresh started
- *       409:
- *         description: Refresh already in progress
- */
-app.post('/api/admin/refresh-all', requireAdmin, requireScope('admin:manage'), function(req, res) {
-  if (refreshRegistry.isRunning()) {
-    return res.status(409).json({ error: 'Refresh is already running' });
-  }
-  refreshRegistry.runAll({ skipCooldown: true }).catch(function(err) {
-    console.error('[refresh-all] runAll error:', err.message);
-  });
-  res.status(202).json({ status: 'started' });
-});
-
-/**
- * @openapi
- * /api/admin/refresh/{module}:
- *   post:
- *     tags: [Admin]
- *     summary: Trigger refresh for a single module's handlers (admin only)
- *     parameters:
- *       - name: module
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       202:
- *         description: Refresh started
- *       404:
- *         description: No handlers registered for module
- *       409:
- *         description: Refresh already in progress
- */
-app.post('/api/admin/refresh/:module', requireAdmin, requireScope('admin:manage'), function(req, res) {
-  if (refreshRegistry.isRunning()) {
-    return res.status(409).json({ error: 'Refresh is already running' });
-  }
-  const slug = req.params.module;
-  const allHandlers = refreshRegistry.getAll();
-  const prefix = slug + ':';
-  const hasHandlers = Object.keys(allHandlers).some(function(id) { return id.startsWith(prefix); });
-  if (!hasHandlers) {
-    return res.status(404).json({ error: 'No handlers registered for module "' + slug + '"' });
-  }
-  refreshRegistry.runModule(slug, { skipCooldown: true }).catch(function(err) {
-    console.error('[refresh-module] runModule error for %s:', slug, err.message);
-  });
-  res.status(202).json({ status: 'started', module: slug });
-});
-
-/**
- * @openapi
- * /api/admin/refresh/status:
- *   get:
- *     tags: [Admin]
- *     summary: Get refresh registry status (admin only)
- *     responses:
- *       200:
- *         description: Current refresh status
- */
-app.get('/api/admin/refresh/status', requireAdmin, requireScope('admin:manage'), async function(req, res) {
-  try {
-    const status = await refreshRegistry.getStatus();
-    res.json(status);
-  } catch (error) {
-    console.error('[refresh-status] Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1469,7 +1311,7 @@ const diagnosticsRegistry = {};
 const messageRegistry = require('../shared/server/message-registry');
 const { createRefreshRegistry } = require('../shared/server/refresh-registry');
 const { createExportRegistry } = require('../shared/server/export-registry');
-const refreshRegistry = createRefreshRegistry(storageModule);
+const refreshRegistry = createRefreshRegistry();
 const exportRegistry = createExportRegistry();
 
 // Register backup staleness message provider (admin-only warning when latest backup > 48h old)
@@ -1505,7 +1347,7 @@ messageRegistry.registerProvider('backup-staleness', async function(userContext)
     return [];
   }
 });
-const coreServices = { storage: storageModule, requireAuth: authMiddleware, requireAdmin, requireTeamAdmin, requireRole, requireScope, roleStore, roleRegistry, scopeRegistry, secretRegistry };
+const coreServices = { storage: storageModule, requireAuth: authMiddleware, requireAdmin, requireTeamAdmin, requireRole, requireScope, roleStore, roleRegistry, scopeRegistry };
 const registries = { diagnostics: diagnosticsRegistry, messages: messageRegistry, refresh: refreshRegistry, exports: exportRegistry };
 
 const persistedState = loadModuleState(storageModule);
@@ -1564,11 +1406,8 @@ if (ttRouter && enabledSlugs.has('team-tracker')) {
 mountModuleRouters(app, builtInModules, moduleRouters);
 
 // ─── Health Metrics (core feature, not a module) ───
-const path = require('path');
 const { createHealthMetricsRouter } = require('./health-metrics/routes');
-const hmDataRoot = storageModule.DATA_DIR || storageModule.FIXTURES_DIR;
-const eventsDir = path.join(hmDataRoot, 'health-metrics', 'events');
-app.use('/api/health-metrics', createHealthMetricsRouter(coreServices, { eventsDir }));
+app.use('/api/health-metrics', createHealthMetricsRouter(coreServices));
 
 /**
  * @openapi
@@ -1962,60 +1801,6 @@ app.get('/api/export/test-data', requireAdmin, requireScope('admin:manage'), exp
   handleExport(req, res, storageModule, exportRegistry);
 });
 
-// ─── Secrets Admin Routes ───
-
-/**
- * @openapi
- * /api/admin/secrets/status:
- *   get:
- *     tags: [Admin]
- *     summary: Get secrets configuration status across all modules
- *     responses:
- *       200:
- *         description: Secrets status (never includes actual values)
- *       403:
- *         $ref: '#/components/responses/Forbidden'
- */
-app.get('/api/admin/secrets/status', requireAdmin, requireScope('admin:manage'), function(_req, res) {
-  res.json(secretRegistry.getStatus());
-});
-
-/**
- * @openapi
- * /api/admin/secrets/validate:
- *   post:
- *     tags: [Admin]
- *     summary: Run registered secret validators
- *     description: Runs all validators, or a subset if keys are specified in the request body.
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               keys:
- *                 type: array
- *                 items: { type: string }
- *                 description: Optional list of secret keys to validate. Omit to run all validators.
- *     responses:
- *       200:
- *         description: Validation results (never includes actual values)
- *       403:
- *         $ref: '#/components/responses/Forbidden'
- */
-app.post('/api/admin/secrets/validate', requireAdmin, requireScope('admin:manage'), async function(req, res) {
-  try {
-    const keys = req.body && Array.isArray(req.body.keys) ? req.body.keys : null;
-    const results = keys && keys.length > 0
-      ? await secretRegistry.validateKeys(keys)
-      : await secretRegistry.validateAll();
-    res.json({ results });
-  } catch (err) {
-    res.status(500).json({ error: 'Validation failed: ' + err.message });
-  }
-});
-
 // ─── Must-Gather: Diagnostic data download ───
 
 const mustGather = require('./must-gather');
@@ -2058,7 +1843,6 @@ app.get('/api/must-gather', requireAdmin, requireScope('admin:manage'), exportRa
       collectModuleDiagnostics,
       diagnosticsRegistry,
       gitSync,
-      secretRegistry,
       redact
     });
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -2358,5 +2142,7 @@ if (!DEMO_MODE) {
 app.listen(PORT, function() {
   console.log(`\nPeople & Teams dev server running at http://localhost:${PORT}`);
   console.log(`Jira host: ${process.env.JIRA_HOST || 'https://redhat.atlassian.net'}`);
-  console.log(`Local storage: ./data/\n`);
+  console.log(`Local storage: ./data/`);
+  console.log(`JIRA_TOKEN: ${process.env.JIRA_TOKEN ? 'set' : 'NOT SET (refresh will fail)'}`);
+  console.log(`JIRA_EMAIL: ${process.env.JIRA_EMAIL ? 'set' : 'NOT SET (refresh will fail)'}\n`);
 });
