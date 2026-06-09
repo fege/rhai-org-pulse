@@ -3,15 +3,13 @@ import { reactive, computed } from 'vue'
 
 const props = defineProps({
   groups: { type: Array, default: () => [] },
-  activeFilter: { type: String, default: null }
+  componentLeads: { type: Object, default: () => ({}) }
 })
 
 const JIRA_BASE = 'https://redhat.atlassian.net/browse'
 
 const COMP_STYLE = {
-  bg: 'bg-slate-50 dark:bg-slate-800/40',
   border: 'border-l-primary-500',
-  badge: 'bg-primary-100 dark:bg-primary-800/40 text-primary-700 dark:text-primary-300',
   dot: 'bg-primary-500'
 }
 
@@ -43,6 +41,17 @@ function collapseAll() {
   }
 }
 
+function getLeads(componentName) {
+  var lower = (componentName || '').toLowerCase()
+  var leads = props.componentLeads
+  if (leads[lower]) return leads[lower]
+  var keys = Object.keys(leads)
+  for (var i = 0; i < keys.length; i++) {
+    if (lower.includes(keys[i]) || keys[i].includes(lower)) return leads[keys[i]]
+  }
+  return null
+}
+
 function extractProduct(versionName) {
   if (!versionName) return versionName
   var lower = versionName.toLowerCase()
@@ -53,7 +62,6 @@ function extractProduct(versionName) {
 }
 
 var componentGroups = computed(function() {
-  var filter = props.activeFilter
   var compMap = {}
 
   for (var gi = 0; gi < props.groups.length; gi++) {
@@ -67,10 +75,7 @@ var componentGroups = computed(function() {
       if (!compMap[cName]) {
         compMap[cName] = {
           component: cName,
-          features: {},
-          requestedCount: 0,
-          committedCount: 0,
-          blockedCount: 0
+          features: {}
         }
       }
 
@@ -101,10 +106,6 @@ var componentGroups = computed(function() {
         var feat = allFeatures[ai]
         var isReq = !!reqKeys[feat.key]
         var isCom = !!comKeys[feat.key]
-
-        if (filter === 'requested' && !isReq) continue
-        if (filter === 'committed' && !isCom) continue
-        if (filter === 'blocked' && !feat.isBlocked) continue
 
         if (!cg.features[feat.key]) {
           cg.features[feat.key] = {
@@ -201,7 +202,7 @@ defineExpose({ expandAll, collapseAll })
             :class="COMP_STYLE.border"
             @click="toggleComponent(comp.component)"
           >
-            <td colspan="9" class="px-4 py-3.5">
+            <td colspan="9" class="px-4 py-3">
               <div class="flex items-center gap-3">
                 <svg
                   class="w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 flex-shrink-0"
@@ -224,6 +225,26 @@ defineExpose({ expandAll, collapseAll })
                     ? 'bg-red-100 dark:bg-red-800/40 text-red-700 dark:text-red-300'
                     : 'bg-gray-100 dark:bg-gray-700/60 text-gray-400 dark:text-gray-500'"
                 >{{ comp.blockedCount }} blocked</span>
+              </div>
+              <div v-if="getLeads(comp.component)" class="flex items-center gap-5 mt-2 ml-[38px]">
+                <div v-if="getLeads(comp.component).pmLead" class="flex items-center gap-1.5">
+                  <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-100 dark:bg-violet-900/40">
+                    <svg class="w-3 h-3 text-violet-600 dark:text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </span>
+                  <span class="text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wide">PM</span>
+                  <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">{{ getLeads(comp.component).pmLead }}</span>
+                </div>
+                <div v-if="getLeads(comp.component).engLead" class="flex items-center gap-1.5">
+                  <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900/40">
+                    <svg class="w-3 h-3 text-sky-600 dark:text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </span>
+                  <span class="text-[11px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wide">Eng</span>
+                  <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">{{ getLeads(comp.component).engLead }}</span>
+                </div>
               </div>
             </td>
           </tr>
@@ -331,10 +352,10 @@ defineExpose({ expandAll, collapseAll })
           </tr>
         </template>
 
-        <!-- No matching results for active filter -->
-        <tr v-if="componentGroups.length === 0 && activeFilter">
+        <!-- No results -->
+        <tr v-if="componentGroups.length === 0">
           <td colspan="9" class="px-8 py-10 text-sm text-gray-400 dark:text-gray-500 italic text-center">
-            No {{ activeFilter }} features found.
+            No features match the current filters.
           </td>
         </tr>
       </tbody>
