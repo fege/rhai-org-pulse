@@ -609,12 +609,14 @@ var clientFilteredGroups = computed(function() {
   }).filter(function(g) { return g.components.length > 0 })
 })
 
+var HIDDEN_COMPONENTS = ['lllm-d']
+
 var uniqueComponents = computed(function() {
   var seen = new Set()
   var result = []
   for (var i = 0; i < components.value.length; i++) {
     var name = components.value[i].name
-    if (!seen.has(name)) {
+    if (!seen.has(name) && HIDDEN_COMPONENTS.indexOf(name) === -1) {
       seen.add(name)
       result.push(name)
     }
@@ -855,11 +857,10 @@ async function loadData() {
 }
 
 watch(selectedPillars, function() {
-  if (selectedPillars.value.length > 0) {
-    selectedComponents.value = pillarFilteredComponents.value.slice()
-  } else {
-    selectedComponents.value = []
-  }
+  var allowed = pillarFilteredComponents.value
+  selectedComponents.value = selectedComponents.value.filter(function(c) {
+    return allowed.indexOf(c) >= 0
+  })
 }, { deep: true })
 
 watch([selectedComponents, selectedVersions], function() {
