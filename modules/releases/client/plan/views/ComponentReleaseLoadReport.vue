@@ -248,7 +248,7 @@
     </div>
 
     <!-- Summary cards -->
-    <div v-if="groups.length > 0 && !loadingData" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div v-if="groups.length > 0 && !loadingData" class="grid grid-cols-2 sm:grid-cols-5 gap-3">
       <div class="relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3.5">
         <div class="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-xl" />
         <div class="flex items-center gap-2 mb-1.5">
@@ -278,6 +278,16 @@
           <span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Blocked</span>
         </div>
         <div class="text-2xl font-bold ml-7" :class="totalBlocked > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'">{{ totalBlocked }}</div>
+      </div>
+      <div class="relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3.5">
+        <div class="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l-xl" />
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/40">
+            <svg class="w-3 h-3 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          </span>
+          <span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Avg / Release</span>
+        </div>
+        <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 ml-7">{{ formattedAvgPerRelease }}</div>
       </div>
       <div class="relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3.5">
         <div class="absolute top-0 left-0 w-1 h-full bg-gray-400 rounded-l-xl" />
@@ -338,6 +348,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { getApiBase } from '@shared/client/services/api'
 import ComponentReleaseLoadTable from '../components/ComponentReleaseLoadTable.vue'
 import PillarConfigPanel from '../components/PillarConfigPanel.vue'
+import { avgPerRelease } from '../utils/summary-stats.js'
 
 const API_BASE = '/modules/releases/pm-hub'
 
@@ -735,6 +746,10 @@ var totalBlocked = computed(function() {
   var count = 0
   for (var i = 0; i < groups.value.length; i++) count += groups.value[i].blockedCount || 0
   return count
+})
+
+var formattedAvgPerRelease = computed(function() {
+  return avgPerRelease(totalRequested.value, selectedVersions.value.length)
 })
 
 function togglePillar(name) {
