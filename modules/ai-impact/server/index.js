@@ -373,6 +373,10 @@ module.exports = function registerRoutes(router, context) {
     });
   }
 
+  if (context.registerExport) {
+    context.registerExport(require('./export'));
+  }
+
   if (context.registerDiagnostics) {
     context.registerDiagnostics(async function() {
       const rfeData = readFromStorage('ai-impact/rfe-data.json');
