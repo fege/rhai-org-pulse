@@ -1,7 +1,7 @@
 {
   "name": "team-tracker",
   "private": true,
-  "version": "1.0.69",
+  "version": "1.0.70",
   "engines": {
     "node": ">=22"
   },
